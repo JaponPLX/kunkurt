@@ -1,0 +1,351 @@
+/* Kunkurt Devs - Futuristic Violet / Cyberpunk UI Stylesheet */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --bg-deep: #07040d;
+  --bg-card: rgba(19, 11, 33, 0.7);
+  --bg-card-hover: rgba(29, 17, 51, 0.85);
+  --border-neon: rgba(168, 85, 247, 0.25);
+  --border-hover: rgba(192, 132, 252, 0.55);
+  --primary-purple: #9333ea;
+  --neon-violet: #a855f7;
+  --glow-violet: rgba(168, 85, 247, 0.35);
+  --neon-pink: #ec4899;
+  --neon-cyan: #06b6d4;
+  --text-main: #f3e8ff;
+  --text-muted: #a78bfa;
+  --text-dim: #7c68a4;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background animated glow orbs */
+.ambient-glow {
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.35;
+  transition: all 1s ease;
+}
+
+.ambient-1 {
+  width: 550px;
+  height: 550px;
+  top: -100px;
+  left: 20%;
+  background: radial-gradient(circle, #8b5cf6 0%, #4c1d95 60%, transparent 100%);
+  animation: floatOrb 18s ease-in-out infinite alternate;
+}
+
+.ambient-2 {
+  width: 450px;
+  height: 450px;
+  bottom: 10%;
+  right: -50px;
+  background: radial-gradient(circle, #c026d3 0%, #581c87 60%, transparent 100%);
+  animation: floatOrb2 22s ease-in-out infinite alternate;
+}
+
+.ambient-3 {
+  width: 380px;
+  height: 380px;
+  top: 45%;
+  left: -80px;
+  background: radial-gradient(circle, #3b82f6 0%, #1e1b4b 60%, transparent 100%);
+  animation: floatOrb 15s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes floatOrb {
+  0% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(60px) scale(1.1); }
+  100% { transform: translateY(-40px) scale(0.95); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translateY(0px) scale(0.9); }
+  50% { transform: translateY(-70px) scale(1.15); }
+  100% { transform: translateY(30px) scale(1); }
+}
+
+/* Cyber Grid background pattern */
+.cyber-grid {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(139, 92, 246, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(139, 92, 246, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-neon);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-hover:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  box-shadow: 0 15px 35px rgba(168, 85, 247, 0.18), 0 0 15px rgba(168, 85, 247, 0.2);
+  transform: translateY(-4px);
+}
+
+/* Neon buttons */
+.btn-neon {
+  background: linear-gradient(135deg, #9333ea 0%, #c026d3 100%);
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.7rem 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-neon:hover {
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.7), 0 0 10px rgba(236, 72, 153, 0.5);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.btn-ghost-neon {
+  background: rgba(147, 51, 234, 0.12);
+  color: var(--text-main);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  font-weight: 500;
+  border-radius: 9999px;
+  padding: 0.65rem 1.4rem;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.btn-ghost-neon:hover {
+  background: rgba(147, 51, 234, 0.25);
+  border-color: var(--neon-violet);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+}
+
+/* Tags & Badges */
+.tech-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(168, 85, 247, 0.12);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Status badges */
+.badge-status {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-production {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-development {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.status-testing {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-planning {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Pulse indicator dot */
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-production .pulse-dot {
+  background-color: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  animation: pulseGreen 2s infinite;
+}
+
+.status-development .pulse-dot {
+  background-color: #c084fc;
+  box-shadow: 0 0 8px #c084fc;
+  animation: pulsePurple 2s infinite;
+}
+
+.status-testing .pulse-dot {
+  background-color: #fbbf24;
+  box-shadow: 0 0 8px #fbbf24;
+  animation: pulseYellow 2s infinite;
+}
+
+.status-planning .pulse-dot {
+  background-color: #60a5fa;
+  box-shadow: 0 0 8px #60a5fa;
+}
+
+@keyframes pulsePurple {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+@keyframes pulseGreen {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Futuristic Logo Glow */
+.logo-glow {
+  background: linear-gradient(135deg, #ffffff 0%, #c084fc 50%, #9333ea 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.4));
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #090514;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4c1d95;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed;
+}
+
+/* Hero Badge */
+.hero-badge {
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.15);
+  border-radius: 9999px;
+  padding: 0.4rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #c084fc;
+}
+
+/* Modal animation */
+.modal-overlay {
+  background: rgba(4, 2, 8, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.3s ease;
+}
+
+.modal-content {
+  animation: modalPop 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.94) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Cyber Inputs */
+.cyber-input {
+  background: rgba(15, 8, 28, 0.8);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #f3e8ff;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.cyber-input:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
+  background: rgba(23, 12, 42, 0.9);
+}
+
+/* Category Filter Pill Active */
+.filter-btn {
+  border-radius: 9999px;
+  padding: 0.45rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+  color: #c4b5fd;
+  background: rgba(147, 51, 234, 0.08);
+}
+
+.filter-btn:hover {
+  background: rgba(147, 51, 234, 0.2);
+  color: #ffffff;
+}
+
+.filter-btn.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+}

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Kunkurt Devs
+Comment=Plataforma de Proyectos Kunkurt & JaponPLX
+Exec=xdg-open "/home/jugador/Descargas/kunkurt devs/static/index.html"
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;

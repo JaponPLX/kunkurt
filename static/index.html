@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kunkurt Devs - Ecosistema de Ingeniería & Proyectos</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Custom Neon Violet / Cyberpunk Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            kunkurt: {
+              950: '#07040d',
+              900: '#120824',
+              800: '#1f0d3d',
+              700: '#38166d',
+              600: '#6d28d9',
+              500: '#8b5cf6',
+              400: '#a855f7',
+              300: '#c084fc',
+              200: '#e9d5ff',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="selection:bg-purple-600 selection:text-white">
+
+  <!-- Matrix Digital Rain Canvas -->
+  <canvas id="matrixCanvas"></canvas>
+
+  <!-- Ambient Light Orbs -->
+  <div class="ambient-glow ambient-1"></div>
+  <div class="ambient-glow ambient-2"></div>
+  <div class="ambient-glow ambient-3"></div>
+  <div class="cyber-grid"></div>
+
+  <!-- Main App Shell -->
+  <div class="relative z-10 flex flex-col min-h-screen">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 border-b border-purple-900/40 glass-panel bg-[#07040d]/85 backdrop-blur-xl">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        
+        <!-- Logo & Brand -->
+        <div class="flex items-center gap-3">
+          <div class="relative w-11 h-11 rounded-xl bg-gradient-to-tr from-purple-600 via-fuchsia-600 to-indigo-500 p-[1.5px] shadow-[0_0_20px_rgba(168,85,247,0.4)]">
+            <div class="w-full h-full bg-[#0d071a] rounded-[10px] flex items-center justify-center">
+              <span class="font-extrabold text-xl text-transparent bg-clip-text bg-gradient-to-br from-white via-purple-200 to-purple-400">K</span>
+            </div>
+            <span class="absolute -top-1 -right-1 w-3 h-3 bg-fuchsia-400 rounded-full animate-ping"></span>
+            <span class="absolute -top-1 -right-1 w-3 h-3 bg-fuchsia-500 rounded-full border-2 border-[#07040d]"></span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-black tracking-tight logo-glow font-['Plus_Jakarta_Sans']">kunkurt</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-950/90 text-purple-300 border border-purple-500/40 tracking-wider">DEVS</span>
+            </div>
+            <p class="text-[11px] text-purple-300/60 font-medium tracking-wide">Ecosistema Tecnológico de Innovación</p>
+          </div>
+        </div>
+
+        <!-- Center: Interactive Quick Role Switcher -->
+        <div class="hidden lg:flex items-center gap-3 px-4 py-1.5 rounded-2xl bg-purple-950/40 border border-purple-500/20 backdrop-blur-md">
+          <span class="text-xs font-semibold text-purple-300/80 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            Rol Activo:
+          </span>
+          <select id="roleSelect" class="bg-[#120824] text-xs font-semibold text-purple-100 rounded-lg px-2.5 py-1.5 border border-purple-500/40 focus:outline-none focus:border-purple-400 cursor-pointer">
+            <option value="admin">👑 Administrador Fundador (JaponPLX - Alejandro)</option>
+            <option value="developer">💻 Desarrollador</option>
+            <option value="qa">🎯 Control de Calidad / QA</option>
+            <option value="designer">🎨 Diseñador UI/UX</option>
+            <option value="manager">📊 Project Manager</option>
+            <option value="employee">👥 Colaborador</option>
+            <option value="public">🌐 Vista Portafolio Cliente</option>
+          </select>
+        </div>
+
+        <!-- Right: Actions & Tools -->
+        <div class="flex items-center gap-2.5">
+
+          <!-- Admin Only: Employee Management Button -->
+          <button id="navAdminEmployeesBtn" onclick="openEmployeeAdminModal()" class="btn-ghost-neon text-xs py-1.5 px-3 border-emerald-500/40 text-emerald-300 hover:text-white" title="Panel del Administrador: Dar de alta nuevos empleados">
+            <span>👥</span> <span class="hidden md:inline">Gestionar Empleados</span>
+          </button>
+
+          <!-- GitHub Auto-Sync Button -->
+          <button onclick="openGithubSyncModal()" class="btn-ghost-neon text-xs py-1.5 px-3 border-purple-500/40" title="Sincronizar tus repositorios de GitHub">
+            <svg class="w-4 h-4 fill-current text-purple-300" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            <span class="hidden sm:inline">GitHub Sync</span>
+          </button>
+
+          <!-- Share / Public Network Access Button -->
+          <button onclick="openShareModal()" class="p-2 rounded-xl bg-purple-950/50 border border-purple-500/30 text-purple-300 hover:text-white hover:border-purple-400 transition-colors" title="Compartir enlace para todo el mundo">
+            🌐
+          </button>
+
+          <!-- Login / Auth with Email Notification Button -->
+          <button onclick="openLoginModal()" class="btn-ghost-neon text-xs py-1.5 px-3 border-fuchsia-500/40 text-fuchsia-200" title="Iniciar Sesión con aviso a tu correo">
+            <span>🔐</span> <span class="hidden md:inline">Iniciar Sesión</span>
+          </button>
+
+          <!-- Terminal CLI Button (Ctrl+K) -->
+          <button onclick="toggleTerminal()" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-300 hover:text-white hover:border-purple-400 text-xs font-mono transition-all" title="Abrir Consola Kunkurt (Ctrl+K)">
+            <span class="text-fuchsia-400">&gt;_</span> CLI
+          </button>
+
+          <!-- Notifications Center Bell -->
+          <div class="relative">
+            <button onclick="toggleNotificationsDropdown()" class="p-2 rounded-xl bg-purple-950/50 border border-purple-500/30 text-purple-300 hover:text-white hover:border-purple-400 transition-colors relative" title="Notificaciones de la Empresa">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+              <span id="notifBadge" class="absolute -top-1 -right-1 w-4 h-4 bg-fuchsia-500 text-white rounded-full text-[10px] font-bold flex items-center justify-center animate-pulse">2</span>
+            </button>
+
+            <!-- Notifications Dropdown Menu -->
+            <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 glass-panel rounded-2xl border border-purple-500/40 p-4 shadow-[0_0_40px_rgba(168,85,247,0.3)] z-50 bg-[#0d071a]/95">
+              <div class="flex items-center justify-between pb-3 border-b border-purple-900/40 mb-3">
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Centro de Notificaciones</span>
+                <span class="text-[10px] text-purple-400/70">Kunkurt Live Feed</span>
+              </div>
+              <div id="notifListContainer" class="space-y-2 max-h-72 overflow-y-auto"></div>
+            </div>
+          </div>
+
+          <!-- User Profile Display -->
+          <div class="flex items-center gap-2 pl-2 border-l border-purple-900/50">
+            <img id="currentUserAvatar" src="https://avatars.githubusercontent.com/u/171938813?v=4" 
+                 alt="User Avatar" class="w-9 h-9 rounded-xl object-cover ring-2 ring-purple-500/50">
+            <div class="hidden sm:block text-left">
+              <p id="currentUserName" class="text-xs font-bold text-white leading-tight">JaponPLX (Alejandro)</p>
+              <span id="currentUserRoleBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white bg-gradient-to-r from-violet-500 to-indigo-600">
+                Desarrollador Lead
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Mobile Role Selector Bar -->
+      <div class="lg:hidden px-4 py-2 bg-purple-950/60 border-t border-purple-900/40 flex items-center justify-between">
+        <span class="text-xs text-purple-300 font-medium">Cambiar Rol:</span>
+        <select onchange="switchRole(this.value)" class="bg-[#120824] text-xs text-purple-100 rounded px-2 py-1 border border-purple-500/40">
+          <option value="developer">💻 Desarrollador (JaponPLX)</option>
+          <option value="employee">👥 Empleado</option>
+          <option value="admin">👑 Admin</option>
+          <option value="public">🌐 Portafolio</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Public Portfolio Banner -->
+    <div id="publicBanner" class="hidden bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-fuchsia-900/90 border-b border-purple-500/30 py-2.5 px-4 text-center text-xs text-purple-100">
+      <span class="font-bold">🌐 Vista Pública para Todo el Mundo:</span> Catálogo accesible de proyectos oficiales de <strong class="text-white">Kunkurt</strong> desarrollados por <strong class="text-fuchsia-300">JaponPLX</strong>.
+    </div>
+
+    <!-- Hero Section -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-8 w-full">
+      <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+        
+        <!-- Left Hero Content -->
+        <div class="max-w-2xl text-left space-y-4">
+          <div class="hero-badge">
+            <span class="w-2 h-2 rounded-full bg-fuchsia-400 animate-ping"></span>
+            <span>HUB GLOBAL KUNKURT • REPOSITORIOS EN TIEMPO REAL</span>
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+            Desarrollo ágil y <br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-fuchsia-400 to-indigo-300">
+              proyectos de alto impacto.
+            </span>
+          </h1>
+
+          <p class="text-purple-200/80 text-base sm:text-lg leading-relaxed font-normal">
+            Plataforma corporativa de <strong class="text-purple-300 font-semibold">Kunkurt</strong> con sincronización automática de GitHub, login seguro con notificación al correo y acceso público para todo el mundo.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button onclick="document.getElementById('catalogSection').scrollIntoView({behavior: 'smooth'})" class="btn-ghost-neon text-sm">
+              <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              Explorar Catálogo
+            </button>
+            <button onclick="openGithubSyncModal()" class="btn-neon text-sm py-2 px-4 shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+              <span>🐙</span> Cargar tus Repositorios GitHub
+            </button>
+            <button onclick="openShareModal()" class="btn-ghost-neon text-sm">
+              <span>🌐</span> Ver en Todo el Mundo
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Hero Stats Dashboard Cards -->
+        <div class="grid grid-cols-2 gap-4 w-full lg:w-auto min-w-[320px]">
+          
+          <div class="glass-panel p-5 rounded-2xl border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.15)] flex flex-col justify-between">
+            <div class="flex items-center justify-between text-purple-400 mb-2">
+              <span class="text-xs uppercase tracking-wider font-semibold">En Producción</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+            </div>
+            <div class="text-3xl font-extrabold text-white font-mono" id="statProdProjects">3</div>
+            <p class="text-[11px] text-purple-300/60 mt-1">Lanzamientos operativos</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.15)] flex flex-col justify-between">
+            <div class="flex items-center justify-between text-purple-400 mb-2">
+              <span class="text-xs uppercase tracking-wider font-semibold">En Desarrollo</span>
+              <span class="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_#c084fc] animate-pulse"></span>
+            </div>
+            <div class="text-3xl font-extrabold text-white font-mono" id="statDevProjects">1</div>
+            <p class="text-[11px] text-purple-300/60 mt-1">Sprints activos</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.15)] flex flex-col justify-between">
+            <div class="flex items-center justify-between text-purple-400 mb-2">
+              <span class="text-xs uppercase tracking-wider font-semibold">Proyectos Totales</span>
+              <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            </div>
+            <div class="text-3xl font-extrabold text-purple-300 font-mono" id="statTotalProjects">4</div>
+            <p class="text-[11px] text-purple-300/60 mt-1">Soluciones sincronizadas</p>
+          </div>
+
+          <div class="glass-panel p-5 rounded-2xl border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.15)] flex flex-col justify-between">
+            <div class="flex items-center justify-between text-purple-400 mb-2">
+              <span class="text-xs uppercase tracking-wider font-semibold">Equipo Activo</span>
+              <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </div>
+            <div class="text-3xl font-extrabold text-fuchsia-300 font-mono" id="statUsers">4</div>
+            <p class="text-[11px] text-purple-300/60 mt-1">Colaboradores Kunkurt</p>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Filters & Catalog Section -->
+    <section id="catalogSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+      
+      <!-- Control Bar -->
+      <div class="glass-panel p-4 rounded-2xl border border-purple-500/20 mb-8 space-y-4">
+        
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+          <!-- Search input -->
+          <div class="relative flex-1">
+            <svg class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input type="text" id="searchInput" placeholder="Buscar por título, stack (FastAPI, Docker, RAG, CSS3...), o palabra clave..." 
+                   class="cyber-input pl-11 text-sm bg-purple-950/40">
+          </div>
+
+          <!-- Status Dropdown -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-purple-300 font-medium whitespace-nowrap">Estado:</span>
+            <select id="statusFilter" class="bg-[#120824] text-xs font-semibold text-purple-200 rounded-xl px-3 py-2.5 border border-purple-500/30 focus:outline-none focus:border-purple-400">
+              <option value="all">Todos los estados</option>
+              <option value="production">🟢 En Producción</option>
+              <option value="development">🟣 En Desarrollo</option>
+              <option value="testing">🟡 En Pruebas</option>
+              <option value="planning">🔵 En Planeación</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Categories Pill Bar -->
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
+            <span class="text-xs text-purple-400 font-semibold uppercase tracking-wider mr-1">Áreas:</span>
+            <button class="filter-btn filter-cat-btn active" data-category="all">Todos</button>
+            <button class="filter-btn filter-cat-btn" data-category="Inteligencia Artificial">IA & RAG</button>
+            <button class="filter-btn filter-cat-btn" data-category="Recursos Humanos & Ops">Talento & SaaS</button>
+            <button class="filter-btn filter-cat-btn" data-category="Web & Mobile">Web & Frontend</button>
+          </div>
+
+          <button onclick="openUploadModal()" class="btn-ghost-neon text-xs py-1.5 px-3">
+            + Subir Proyecto Manual
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Projects Grid -->
+      <div id="projectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden py-16 text-center glass-panel rounded-2xl border border-purple-500/20 max-w-md mx-auto my-8 p-8">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-purple-950/60 flex items-center justify-center text-purple-400 border border-purple-500/30">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-1">Sin proyectos encontrados</h3>
+        <p class="text-sm text-purple-300/70 mb-4">No hay proyectos que coincidan con los filtros seleccionados.</p>
+        <button onclick="currentCategory='all'; currentStatus='all'; currentSearch=''; document.getElementById('searchInput').value=''; document.querySelectorAll('.filter-cat-btn').forEach((b,i)=>i===0?b.classList.add('active'):b.classList.remove('active')); loadProjects();" 
+                class="btn-ghost-neon text-xs">
+          Restablecer Filtros
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-purple-900/30 py-8 px-4 sm:px-6 lg:px-8 mt-auto bg-[#05030a]/80">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-purple-400/60 font-medium">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-purple-300">Kunkurt Devs</span> • Plataforma Conectada a <strong class="text-fuchsia-300">JaponPLX</strong>
+        </div>
+        <div class="flex items-center gap-4">
+          <button onclick="openShareModal()" class="text-purple-400 hover:text-white">🌐 Compartir Acceso</button>
+          <span>•</span>
+          <button onclick="toggleTerminal()" class="text-purple-400 hover:text-white font-mono">&gt;_ Terminal CLI</button>
+          <span>•</span>
+          <button onclick="openHallOfFame()" class="text-purple-400 hover:text-white">🏆 Hall of Fame</button>
+          <span>•</span>
+          <span>© 2026 Kunkurt. Todos los derechos reservados.</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- FLOATING TERMINAL BUTTON -->
+  <div id="terminalFloatingBtn" class="fixed bottom-6 left-6 z-40">
+    <button onclick="toggleTerminal()" class="p-3 rounded-2xl bg-purple-950/80 border border-purple-500/40 text-purple-300 hover:text-white hover:border-purple-300 shadow-[0_0_25px_rgba(168,85,247,0.4)] backdrop-blur-md transition-all flex items-center gap-2 group">
+      <span class="font-mono font-bold text-fuchsia-400 group-hover:animate-pulse">&gt;_</span>
+      <span class="text-xs font-mono hidden sm:inline">Kunkurt CLI (Ctrl+K)</span>
+    </button>
+  </div>
+
+  <!-- ========================================================================== -->
+  <!-- MODAL: GITHUB AUTO-SYNC (Importar repositorios de tu perfil de GitHub) -->
+  <!-- ========================================================================== -->
+  <div id="githubSyncModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-purple-500/40 w-full max-w-xl bg-[#0e071c] shadow-[0_0_60px_rgba(168,85,247,0.4)] overflow-hidden">
+      <div class="p-6 border-b border-purple-900/40 flex items-center justify-between bg-gradient-to-r from-purple-950/40 to-transparent">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300">
+            <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Sincronizar con GitHub</h3>
+            <p class="text-xs text-purple-300/70">Carga automáticamente todos los repositorios de tu perfil</p>
+          </div>
+        </div>
+        <button onclick="closeGithubSyncModal()" class="text-purple-400 hover:text-white p-2">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-purple-200 mb-1.5">Nombre de Usuario en GitHub</label>
+          <div class="flex gap-2">
+            <input type="text" id="syncGithubUsername" value="JaponPLX" placeholder="Ej: JaponPLX" class="cyber-input text-sm flex-1 font-mono">
+            <button type="button" onclick="executeGithubSync()" id="btnExecuteSync" class="btn-neon text-xs py-2 px-4 whitespace-nowrap">
+              ⚡ Sincronizar Ahora
+            </button>
+          </div>
+          <p class="text-[11px] text-purple-400/60 mt-1">Lee tus repositorios públicos, lenguajes, descripciones y los importa automáticamente.</p>
+        </div>
+
+        <div id="syncResultContainer" class="hidden p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+          <!-- Populated after sync -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================== -->
+  <!-- ========================================================================== -->
+  <!-- MODAL: LOGIN REAL PARA EMPLEADOS (CON ROL ASIGNADO POR EL ADMINISTRADOR) -->
+  <!-- ========================================================================== -->
+  <div id="loginModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-purple-500/40 w-full max-w-lg bg-[#0e071c] shadow-[0_0_60px_rgba(168,85,247,0.4)] overflow-hidden">
+      <div class="p-6 border-b border-purple-900/40 flex items-center justify-between bg-gradient-to-r from-purple-950/40 via-indigo-950/30 to-transparent">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-fuchsia-600/30 border border-fuchsia-500/40 flex items-center justify-center text-fuchsia-300">
+            <span class="text-xl">🔐</span>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Iniciar Sesión Kunkurt</h3>
+            <p class="text-xs text-purple-300/70">Ingresa con tu correo autorizado por el Administrador</p>
+          </div>
+        </div>
+        <button onclick="closeLoginModal()" class="text-purple-400 hover:text-white p-2">✕</button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <form id="authLoginForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-purple-200 mb-1.5">Correo Electrónico Registrado *</label>
+            <input type="email" id="loginEmail" required value="alejandrobelno964@gmail.com" placeholder="tu.correo@kunkurt.com o tu@correo.com" class="cyber-input text-sm">
+            <span class="text-[11px] text-purple-400/80 block mt-1">
+              🛡️ El sistema detectará automáticamente tu rol asignado por el Administrador y enviará una notificación de seguridad a tu correo.
+            </span>
+          </div>
+
+          <div class="p-3.5 rounded-2xl bg-purple-950/30 border border-purple-900/40 text-[11px] text-purple-300/80 flex items-start gap-2.5">
+            <span class="text-base leading-none">🔒</span>
+            <p>Por seguridad, solo el <strong>Administrador de Kunkurt</strong> puede dar de alta a nuevos empleados. Si aún no estás registrado, solicita a tu Administrador tu alta de usuario.</p>
+          </div>
+
+          <button type="submit" id="btnLoginSubmit" class="btn-neon w-full justify-center text-sm py-2.5 shadow-[0_0_25px_rgba(168,85,247,0.5)]">
+            Acceder con mi Rol Encargado
+          </button>
+        </form>
+
+        <!-- Empleados Autorizados en la Base de Datos -->
+        <div class="pt-4 border-t border-purple-900/40">
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-xs font-bold text-purple-200">Personal Autorizado en Kunkurt:</span>
+            <span class="text-[10px] text-purple-400/70">Clic para autocompletar</span>
+          </div>
+          <div id="authorizedEmployeesQuickList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <!-- Dynamically populated from /api/employees -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================== -->
+  <!-- MODAL: PANEL DE ADMINISTRACIÓN DE EMPLEADOS (SOLO ADMINISTRADOR) -->
+  <!-- ========================================================================== -->
+  <div id="employeeAdminModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-emerald-500/40 w-full max-w-2xl bg-[#0e071c] shadow-[0_0_60px_rgba(16,185,129,0.3)] overflow-hidden">
+      <!-- Header -->
+      <div class="p-6 border-b border-emerald-900/40 flex items-center justify-between bg-gradient-to-r from-emerald-950/40 via-purple-950/30 to-transparent">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-600/30 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
+            <span class="text-xl">👑</span>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Panel de Administración de Empleados</h3>
+            <p class="text-xs text-emerald-300/70">Solo el Administrador puede dar de alta nuevos empleados y asignarles su rol</p>
+          </div>
+        </div>
+        <button onclick="closeEmployeeAdminModal()" class="text-purple-400 hover:text-white p-2">✕</button>
+      </div>
+
+      <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+        <!-- FORMULARIO: REGISTRAR NUEVO EMPLEADO -->
+        <form id="createEmployeeForm" class="p-5 rounded-2xl bg-purple-950/30 border border-emerald-500/30 space-y-4">
+          <h4 class="text-sm font-bold text-emerald-300 flex items-center gap-2">
+            <span>➕</span> Dar de Alta a Nuevo Empleado o Desarrollador
+          </h4>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-purple-200 mb-1">Nombre Completo *</label>
+              <input type="text" id="newEmpFullName" required placeholder="Ej: Carlos Gómez" class="cyber-input text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-purple-200 mb-1">Correo Electrónico *</label>
+              <input type="email" id="newEmpEmail" required placeholder="carlos@kunkurt.com o tu@correo.com" class="cyber-input text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-purple-200 mb-1">Rol Encargado Asignado *</label>
+              <select id="newEmpRole" class="cyber-input text-sm">
+                <option value="developer">💻 Desarrollador Lead / Fullstack</option>
+                <option value="qa">🎯 Control de Calidad & Testing (QA)</option>
+                <option value="designer">🎨 Diseñador UI/UX & Frontend</option>
+                <option value="manager">📊 Project Manager & Scrum Master</option>
+                <option value="employee">👥 Colaborador / Empleado</option>
+                <option value="admin">👑 Administrador</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-purple-200 mb-1">Departamento / Área</label>
+              <input type="text" id="newEmpDept" placeholder="Ej: Desarrollo Backend" class="cyber-input text-sm">
+            </div>
+          </div>
+
+          <button type="submit" id="btnCreateEmpSubmit" class="btn-neon w-full justify-center text-xs py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+            Guardar y Autorizar Acceso de Empleado
+          </button>
+        </form>
+
+        <!-- LISTA DE EMPLEADOS REGISTRADOS -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-purple-300 mb-3 flex items-center justify-between">
+            <span>👥 Empleados Activos y Autorizados en el Sistema</span>
+            <span id="adminEmpCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">1 Activo</span>
+          </h4>
+          <div id="adminEmployeesTable" class="space-y-2">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================== -->
+  <!-- MODAL: COMPARTIR / ACCESO PÚBLICO PARA TODO EL MUNDO -->
+  <!-- ========================================================================== -->
+  <div id="shareModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-purple-500/40 w-full max-w-lg bg-[#0e071c] shadow-[0_0_60px_rgba(168,85,247,0.4)] overflow-hidden">
+      <div class="p-6 border-b border-purple-900/40 flex items-center justify-between bg-gradient-to-r from-purple-950/40 to-transparent">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🌐</span>
+          <div>
+            <h3 class="text-lg font-bold text-white">Compartir para Todo el Mundo</h3>
+            <p class="text-xs text-purple-300/70">Permite que cualquier persona o cliente vea tus proyectos</p>
+          </div>
+        </div>
+        <button onclick="closeShareModal()" class="text-purple-400 hover:text-white p-2">✕</button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <!-- Local machine link -->
+        <div class="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-1.5">
+          <span class="text-xs font-bold text-purple-300 uppercase tracking-wider block">1. Acceso en tu Computadora</span>
+          <div class="flex items-center gap-2">
+            <input type="text" id="shareLocalUrl" readonly value="http://localhost:8080" class="cyber-input text-xs font-mono py-1.5 flex-1 bg-black/40">
+            <button onclick="copyToClipboard(document.getElementById('shareLocalUrl').value)" class="btn-ghost-neon text-xs py-1.5 px-3">Copiar</button>
+          </div>
+        </div>
+
+        <!-- LAN link (Wi-Fi) -->
+        <div class="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-1.5">
+          <span class="text-xs font-bold text-fuchsia-300 uppercase tracking-wider block">2. Acceso en tu Red Wi-Fi (Celulares y otras PCs)</span>
+          <p class="text-[11px] text-purple-300/70">Cualquiera conectado a tu mismo Wi-Fi puede entrar sin instalar nada:</p>
+          <div class="flex items-center gap-2">
+            <input type="text" id="shareLanUrl" readonly value="Cargando IP de red..." class="cyber-input text-xs font-mono py-1.5 flex-1 bg-black/40">
+            <button onclick="copyToClipboard(document.getElementById('shareLanUrl').value)" class="btn-ghost-neon text-xs py-1.5 px-3">Copiar</button>
+          </div>
+        </div>
+
+        <!-- Global Internet Tunnel -->
+        <div class="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+          <span class="text-xs font-bold text-emerald-300 uppercase tracking-wider block">3. Enlace Público Mundial (Internet)</span>
+          <p class="text-[11px] text-purple-300/70">Para que clientes o personas en cualquier lugar del planeta lo vean, abre tu terminal y ejecuta:</p>
+          <div class="p-2.5 rounded-xl bg-black/60 font-mono text-xs text-purple-200 border border-purple-900/50 flex items-center justify-between">
+            <code>./tunel_publico.sh</code>
+            <button onclick="copyToClipboard('./tunel_publico.sh')" class="text-purple-400 hover:text-white text-[11px]">Copiar comando</button>
+          </div>
+          <span class="text-[10px] text-purple-400/60 block">Genera un enlace HTTPS seguro y gratuito que puedes mandar por WhatsApp o correo.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TERMINAL CYBERPUNK (Ctrl + K) -->
+  <div id="terminalModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="cyber-terminal rounded-2xl w-full max-w-3xl overflow-hidden shadow-[0_0_60px_rgba(168,85,247,0.5)] border border-purple-500">
+      <div class="p-3 bg-purple-950/80 border-b border-purple-500/30 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-3 h-3 rounded-full bg-red-500 cursor-pointer" onclick="closeTerminal()"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+          <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          <span class="text-xs text-purple-300 font-mono ml-2 font-bold">kunkurt-cli ~ bash v5.2 (JaponPLX)</span>
+        </div>
+        <span class="text-[10px] text-purple-400/60 font-mono">Escribe 'help' para comandos</span>
+      </div>
+
+      <div id="terminalBody" class="p-5 h-80 overflow-y-auto space-y-2 text-xs font-mono terminal-scanlines">
+        <div class="text-fuchsia-400 font-bold">Kunkurt Devs System Shell [Versión 2.6.0]</div>
+        <div class="text-purple-300/80">Conectado a nodo principal en <span class="text-emerald-400">127.0.0.1:8080</span>. Desarrollador: <span class="text-white font-bold">JaponPLX</span>.</div>
+        <div class="text-purple-400/60">Escribe <span class="text-fuchsia-300 font-bold">help</span> para comandos rápidos o <span class="text-fuchsia-300 font-bold">matrix</span> para efecto lluvia morada.</div>
+        <div class="pb-2 border-b border-purple-900/40"></div>
+      </div>
+
+      <div class="p-3 bg-[#0d071a] border-t border-purple-500/30 flex items-center gap-2">
+        <span class="text-fuchsia-400 font-mono font-bold text-xs">kunkurt@system:~$</span>
+        <input type="text" id="terminalInput" class="bg-transparent text-white font-mono text-xs focus:outline-none flex-1" placeholder="Ej: status, projects, sync, deploy, team, matrix..." autofocus>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: HALL OF FAME / RECONOCIMIENTOS -->
+  <div id="hallOfFameModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-purple-500/40 w-full max-w-2xl bg-[#0d071a] shadow-[0_0_60px_rgba(168,85,247,0.35)] overflow-hidden">
+      <div class="p-6 border-b border-purple-900/40 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🏆</span>
+          <div>
+            <h3 class="text-lg font-bold text-white">Kunkurt Hall of Fame & Gamificación</h3>
+            <p class="text-xs text-purple-300/70">Reconocimientos de desarrolladores y colaboradores</p>
+          </div>
+        </div>
+        <button onclick="closeHallOfFame()" class="text-purple-400 hover:text-white p-2">✕</button>
+      </div>
+
+      <div id="hallOfFameList" class="p-6 space-y-3 max-h-[70vh] overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: DETALLE DE PROYECTO MULTI-PESTAÑA (Overview, Kanban, Changelog, Feedback) -->
+  <div id="detailModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-purple-500/40 w-full max-w-4xl bg-[#0d071a] shadow-[0_0_60px_rgba(168,85,247,0.35)] overflow-hidden flex flex-col max-h-[92vh]">
+      
+      <!-- Top Banner -->
+      <div class="relative h-60 w-full bg-purple-950/60 overflow-hidden flex-shrink-0">
+        <img id="detailImage" src="" alt="Project Cover" class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0d071a] via-[#0d071a]/50 to-transparent"></div>
+
+        <button onclick="closeDetailModal()" class="absolute top-4 right-4 z-20 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-md border border-white/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="absolute bottom-4 left-6 right-6 z-10 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span id="detailCategory" class="text-xs uppercase tracking-wider font-semibold text-purple-300 bg-purple-950/80 px-2.5 py-1 rounded-md border border-purple-500/30">
+              Categoría
+            </span>
+            <h2 id="detailTitle" class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Título</h2>
+          </div>
+          <span id="detailStatus" class="badge-status">Estado</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs Header -->
+      <div class="flex items-center gap-2 border-b border-purple-900/40 px-6 bg-[#090412] overflow-x-auto no-scrollbar">
+        <button onclick="switchDetailTab('overview')" data-tab="overview" class="detail-tab-btn py-3 px-4 border-b-2 font-medium text-xs border-purple-400 text-purple-200">
+          📖 Visión & Arquitectura
+        </button>
+        <button onclick="switchDetailTab('kanban')" data-tab="kanban" class="detail-tab-btn py-3 px-4 border-b-2 font-medium text-xs border-transparent text-purple-400/70 hover:text-purple-200">
+          📊 Tablero Sprint Kanban
+        </button>
+        <button onclick="switchDetailTab('changelog')" data-tab="changelog" class="detail-tab-btn py-3 px-4 border-b-2 font-medium text-xs border-transparent text-purple-400/70 hover:text-purple-200">
+          🚀 Historial de Versiones
+        </button>
+        <button onclick="switchDetailTab('feedback')" data-tab="feedback" class="detail-tab-btn py-3 px-4 border-b-2 font-medium text-xs border-transparent text-purple-400/70 hover:text-purple-200">
+          💬 Feedback & Colaboración (<span id="commentsCount">0</span>)
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto flex-1">
+        
+        <!-- TAB 1: OVERVIEW -->
+        <div id="tabPanel-overview" class="detail-tab-panel space-y-6">
+          <div>
+            <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">Resumen Ejecutivo</h4>
+            <p id="detailSummary" class="text-sm text-purple-100 font-medium leading-relaxed"></p>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">Arquitectura & Detalles Técnicos</h4>
+            <p id="detailDescription" class="text-sm text-purple-200/80 leading-relaxed whitespace-pre-line"></p>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">Stack Tecnológico</h4>
+            <div id="detailTechStack" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <div class="flex flex-wrap gap-3 pt-2">
+            <a id="detailGithubBtn" href="#" target="_blank" class="btn-ghost-neon text-xs py-2 px-4">
+              <svg class="w-4 h-4 fill-current mr-1" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              Ver en GitHub
+            </a>
+            <a id="detailDemoBtn" href="#" target="_blank" class="btn-neon text-xs py-2 px-4">
+              Abrir Proyecto
+            </a>
+            <button onclick="printProjectOnePager()" class="btn-ghost-neon text-xs py-2 px-4 ml-auto" title="Exportar Ficha Técnica">
+              📄 Imprimir Ficha
+            </button>
+          </div>
+
+          <div class="py-3 px-4 rounded-xl bg-purple-950/30 border border-purple-900/40 flex items-center justify-between text-xs text-purple-300">
+            <span>Creador: <strong id="detailAuthor" class="text-white"></strong> (<span id="detailAuthorRole"></span>)</span>
+            <span>Repositorio Oficial GitHub</span>
+          </div>
+        </div>
+
+        <!-- TAB 2: KANBAN SPRINT BOARD -->
+        <div id="tabPanel-kanban" class="detail-tab-panel hidden space-y-4">
+          <div id="taskFormContainer" class="p-4 rounded-2xl bg-purple-950/40 border border-purple-900/40">
+            <h5 class="text-xs font-bold text-white mb-2 uppercase tracking-wider">Añadir Tarea al Sprint</h5>
+            <form id="newTaskForm" class="flex flex-col sm:flex-row gap-2">
+              <input type="text" id="taskTitleInput" required placeholder="Nombre de la tarea o mejora en el código..." class="cyber-input text-xs flex-1">
+              <select id="taskPrioritySelect" class="bg-[#120824] text-xs font-medium text-purple-200 rounded-xl px-3 py-2 border border-purple-500/30">
+                <option value="medium">Prioridad Media</option>
+                <option value="high">Prioridad Alta</option>
+                <option value="urgent">Urgente 🔥</option>
+                <option value="low">Baja</option>
+              </select>
+              <button type="submit" class="btn-neon text-xs py-2 px-4 whitespace-nowrap">+ Crear Tarea</button>
+            </form>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="kanban-column p-3 flex flex-col">
+              <div class="flex items-center justify-between mb-3 pb-2 border-b border-purple-900/40 text-xs font-bold text-purple-300">
+                <span>📋 BACKLOG</span>
+              </div>
+              <div id="kanbanCol-todo" class="space-y-2 flex-1 min-h-[150px]"></div>
+            </div>
+
+            <div class="kanban-column p-3 flex flex-col">
+              <div class="flex items-center justify-between mb-3 pb-2 border-b border-purple-900/40 text-xs font-bold text-yellow-300">
+                <span>⚡ EN PROGRESO</span>
+              </div>
+              <div id="kanbanCol-in_progress" class="space-y-2 flex-1 min-h-[150px]"></div>
+            </div>
+
+            <div class="kanban-column p-3 flex flex-col">
+              <div class="flex items-center justify-between mb-3 pb-2 border-b border-purple-900/40 text-xs font-bold text-fuchsia-300">
+                <span>🔍 REVIEW / QA</span>
+              </div>
+              <div id="kanbanCol-review" class="space-y-2 flex-1 min-h-[150px]"></div>
+            </div>
+
+            <div class="kanban-column p-3 flex flex-col">
+              <div class="flex items-center justify-between mb-3 pb-2 border-b border-purple-900/40 text-xs font-bold text-emerald-300">
+                <span>✅ COMPLETADO</span>
+              </div>
+              <div id="kanbanCol-done" class="space-y-2 flex-1 min-h-[150px]"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: CHANGELOG -->
+        <div id="tabPanel-changelog" class="detail-tab-panel hidden space-y-4">
+          <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2">Bitácora de Versiones & Releases</h4>
+          <div id="changelogContainer" class="p-2 space-y-4"></div>
+        </div>
+
+        <!-- TAB 4: FEEDBACK & COLLABORATION -->
+        <div id="tabPanel-feedback" class="detail-tab-panel hidden space-y-5">
+          <form id="commentForm" class="p-4 rounded-2xl bg-purple-950/40 border border-purple-900/40 space-y-3">
+            <span class="text-xs font-bold text-white uppercase tracking-wider block">Aportar Retroalimentación</span>
+            <div class="flex gap-2">
+              <select id="commentType" class="bg-[#120824] text-xs font-medium text-purple-200 rounded-xl px-2.5 py-2 border border-purple-500/30">
+                <option value="general">💬 General</option>
+                <option value="kudos">🎉 Felicitación</option>
+                <option value="feature_request">💡 Sugerencia</option>
+                <option value="bug">🐛 Reportar Bug</option>
+              </select>
+              <input type="text" id="commentContent" required placeholder="Escribe tu observación técnica o aporte..." class="cyber-input text-xs flex-1">
+              <button type="submit" class="btn-neon text-xs py-2 px-4 whitespace-nowrap">Enviar (+15 pts)</button>
+            </div>
+          </form>
+
+          <div id="commentsContainer" class="space-y-2.5 max-h-80 overflow-y-auto"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: SUBIR PROYECTO MANUAL -->
+  <div id="uploadModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-purple-500/40 w-full max-w-2xl bg-[#0e071c] shadow-[0_0_50px_rgba(168,85,247,0.3)] overflow-hidden">
+      
+      <div class="p-6 border-b border-purple-900/40 flex items-center justify-between bg-gradient-to-r from-purple-950/40 to-transparent">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/40 flex items-center justify-center text-purple-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-white">Subir Nuevo Proyecto</h2>
+            <p class="text-xs text-purple-300/70">Registra y comparte tu proyecto técnico con el equipo</p>
+          </div>
+        </div>
+        <button onclick="closeUploadModal()" class="text-purple-400 hover:text-white p-2">✕</button>
+      </div>
+
+      <form id="projectForm" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-purple-200 mb-1">Título del Proyecto *</label>
+            <input type="text" id="projectTitle" required placeholder="Ej. Nuevo Microservicio Kunkurt" class="cyber-input text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-purple-200 mb-1">Categoría / Área *</label>
+            <select id="projectCategory" class="cyber-input text-sm">
+              <option value="Inteligencia Artificial">Inteligencia Artificial</option>
+              <option value="Recursos Humanos & Ops">Recursos Humanos & Ops</option>
+              <option value="Web & Mobile">Web & Mobile</option>
+              <option value="Cloud & DevOps">Cloud & DevOps</option>
+              <option value="Ciberseguridad">Ciberseguridad</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-purple-200 mb-1">Estado *</label>
+            <select id="projectStatus" class="cyber-input text-sm">
+              <option value="planning">🔵 Planeación</option>
+              <option value="development" selected>🟣 En Desarrollo</option>
+              <option value="testing">🟡 En Pruebas</option>
+              <option value="production">🟢 Producción</option>
+            </select>
+          </div>
+          <div class="flex flex-col justify-end">
+            <label class="flex items-center gap-3 p-2.5 rounded-xl bg-purple-950/30 border border-purple-900/40 cursor-pointer">
+              <input type="checkbox" id="projectPublic" checked class="w-4 h-4 rounded text-purple-600">
+              <span class="text-xs font-semibold text-white">Visible en Portafolio Público</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-purple-200 mb-1">Resumen Breve *</label>
+          <input type="text" id="projectSummary" required placeholder="Descripción de una línea..." class="cyber-input text-sm">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-purple-200 mb-1">Detalles Técnicos & Arquitectura</label>
+          <textarea id="projectDescription" rows="3" placeholder="Explica cómo funciona..." class="cyber-input text-sm"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-purple-200 mb-1">Stack Tecnológico</label>
+          <div id="popularTagsContainer" class="flex flex-wrap gap-1.5 mb-2"></div>
+          <div class="flex gap-2">
+            <input type="text" id="customTagInput" placeholder="Añadir otra tecnología..." class="cyber-input text-xs py-2">
+            <button type="button" onclick="addCustomTechTag()" class="btn-ghost-neon text-xs py-2 px-3">+ Añadir</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-purple-200 mb-1">GitHub / Repositorio</label>
+            <input type="url" id="projectGithub" placeholder="https://github.com/..." class="cyber-input text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-purple-200 mb-1">Demo en Vivo / Staging</label>
+            <input type="url" id="projectDemo" placeholder="https://demo.kunkurt.io" class="cyber-input text-sm">
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-purple-900/40 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeUploadModal()" class="text-sm text-purple-300 hover:text-white px-4 py-2">Cancelar</button>
+          <button type="submit" id="btnSubmitProject" class="btn-neon text-sm py-2 px-6">Lanzar Proyecto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="js/app.js"></script>
+</body>
+</html>
