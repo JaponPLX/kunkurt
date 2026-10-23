@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
-# Ubicarse automáticamente en la carpeta del proyecto
+# Ubicarse de forma 100% portable en la carpeta del proyecto
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
 
-PORT=8080
-if [ -f ".active_port" ]; then
-    PORT=$(cat .active_port)
+# Leer dinámicamente el puerto activo o variable PORT
+PORT="${PORT:-8080}"
+if [ -f "$SCRIPT_DIR/.active_port" ]; then
+    SAVED_PORT=$(cat "$SCRIPT_DIR/.active_port" 2>/dev/null | tr -d '[:space:]')
+    if [ -n "$SAVED_PORT" ]; then
+        PORT="$SAVED_PORT"
+    fi
 fi
 
 # Generar llave SSH local si no existe (soluciona el error 'permission denied')
@@ -19,10 +23,10 @@ fi
 # Verificar si el servidor local está prendido
 if ! curl -s "http://localhost:$PORT" > /dev/null 2>&1; then
     echo "⚡ Iniciando servidor Kunkurt en segundo plano..."
-    python3 server.py &
+    python3 "$SCRIPT_DIR/server.py" "$PORT" &
     sleep 1.5
-    if [ -f ".active_port" ]; then
-        PORT=$(cat .active_port)
+    if [ -f "$SCRIPT_DIR/.active_port" ]; then
+        PORT=$(cat "$SCRIPT_DIR/.active_port" 2>/dev/null | tr -d '[:space:]')
     fi
 fi
 

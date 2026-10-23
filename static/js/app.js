@@ -160,7 +160,7 @@ const DEFAULT_NOTIFICATIONS = [
   { title: "⭐ Plataforma Kunkurt Activa", message: "Catálogo oficial listo con seguridad y roles por el Administrador.", time_ago: "Hace 5 min", is_read: 0 }
 ];
 
-let currentRole = "admin";
+let currentRole = "public";
 let activeProfile = PROFILES[currentRole];
 let allProjects = [];
 let currentCategory = "all";
@@ -178,40 +178,56 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
   loadStats();
   loadProjects();
+  loadTickets();
   loadNotifications();
   loadAuthorizedEmployees();
   initTechTagPills();
   setupTerminal();
   setupKeyboardShortcuts();
+
+  // If visitor is not logged in, prompt them to sign in or register with their own credentials
+  const savedProfile = localStorage.getItem("kunkurt_active_profile");
+  if (!savedProfile || currentRole === "public") {
+    setTimeout(() => {
+      openLoginModal();
+    }, 500);
+  }
 });
 
 // Setup Role Switcher & Persistent Sessions
 function setupRoleSwitcher() {
   const savedRole = localStorage.getItem("kunkurt_active_role");
   const savedProfile = localStorage.getItem("kunkurt_active_profile");
-  if (savedRole && PROFILES[savedRole]) {
-    currentRole = savedRole;
-    activeProfile = PROFILES[savedRole];
-  }
+  
   if (savedProfile) {
     try {
       const parsed = JSON.parse(savedProfile);
-      if (parsed && parsed.role) {
+      if (parsed && parsed.role && parsed.role !== "public") {
         currentRole = parsed.role;
         activeProfile = { ...(PROFILES[parsed.role] || {}), ...parsed };
         PROFILES[parsed.role] = activeProfile;
+      } else {
+        currentRole = "public";
+        activeProfile = PROFILES.public;
       }
-    } catch (e) {}
+    } catch (e) {
+      currentRole = "public";
+      activeProfile = PROFILES.public;
+    }
+  } else {
+    currentRole = "public";
+    activeProfile = PROFILES.public;
   }
 
   const roleSelect = document.getElementById("roleSelect");
-  if (!roleSelect) return;
-  roleSelect.value = currentRole;
-  updateRoleUI();
+  if (roleSelect) {
+    roleSelect.value = currentRole;
+    roleSelect.addEventListener("change", (e) => {
+      switchRole(e.target.value);
+    });
+  }
 
-  roleSelect.addEventListener("change", (e) => {
-    switchRole(e.target.value);
-  });
+  updateRoleUI();
 }
 
 function switchRole(newRole) {
@@ -252,6 +268,12 @@ function updateRoleUI() {
   // Only Administrator can view the employee registration panel button
   const adminBtn = document.getElementById("navAdminEmployeesBtn");
   if (adminBtn) adminBtn.style.display = currentRole === "admin" ? "inline-flex" : "none";
+
+  // Login / Logout buttons toggling
+  const navLoginBtn = document.getElementById("navLoginBtn");
+  const navLogoutBtn = document.getElementById("navLogoutBtn");
+  if (navLoginBtn) navLoginBtn.style.display = currentRole === "public" ? "inline-flex" : "none";
+  if (navLogoutBtn) navLogoutBtn.style.display = currentRole !== "public" ? "inline-flex" : "none";
 }
 
 // Global Event Listeners
@@ -315,8 +337,40 @@ function setupEventListeners() {
   const authLoginForm = document.getElementById("authLoginForm");
   if (authLoginForm) authLoginForm.addEventListener("submit", handleLoginSubmit);
 
+  const authRegisterForm = document.getElementById("authRegisterForm");
+  if (authRegisterForm) authRegisterForm.addEventListener("submit", handleRegisterSubmit);
+
   const createEmpForm = document.getElementById("createEmployeeForm");
   if (createEmpForm) createEmpForm.addEventListener("submit", handleCreateEmployee);
+
+  const smtpSettingsForm = document.getElementById("smtpSettingsForm");
+  if (smtpSettingsForm) smtpSettingsForm.addEventListener("submit", handleSaveSmtpSettings);
+
+  const createTicketForm = document.getElementById("createTicketForm");
+  if (createTicketForm) createTicketForm.addEventListener("submit", handleCreateTicketSubmit);
+
+  const ticketReplyForm = document.getElementById("ticketReplyForm");
+  if (ticketReplyForm) ticketReplyForm.addEventListener("submit", handleTicketReplySubmit);
+
+  const ticketStatusFilter = document.getElementById("ticketStatusFilter");
+  if (ticketStatusFilter) ticketStatusFilter.addEventListener("change", filterTickets);
+
+  const ticketPriorityFilter = document.getElementById("ticketPriorityFilter");
+  if (ticketPriorityFilter) ticketPriorityFilter.addEventListener("change", filterTickets);
+
+  const ticketCategoryFilter = document.getElementById("ticketCategoryFilter");
+  if (ticketCategoryFilter) ticketCategoryFilter.addEventListener("change", filterTickets);
+
+  const ticketSearchInput = document.getElementById("ticketSearchInput");
+  let ticketSearchTimeout = null;
+  if (ticketSearchInput) {
+    ticketSearchInput.addEventListener("input", () => {
+      clearTimeout(ticketSearchTimeout);
+      ticketSearchTimeout = setTimeout(() => {
+        filterTickets();
+      }, 200);
+    });
+  }
 }
 
 function setupKeyboardShortcuts() {
@@ -336,6 +390,9 @@ function setupKeyboardShortcuts() {
       closeLoginModal();
       closeShareModal();
       closeEmployeeAdminModal();
+      closeCreateTicketModal();
+      closeTicketDetailModal();
+      closeUserProfileModal();
     }
     const pitchModal = document.getElementById("pitchDeckModal");
     if (pitchModal && !pitchModal.classList.contains("hidden")) {
@@ -525,7 +582,7 @@ function renderProjects(projects) {
 
 function createProjectCard(p) {
   const card = document.createElement("div");
-  card.className = "glass-panel glass-panel-hover rounded-2xl overflow-hidden flex flex-col group relative border border-purple-900/40 hover:border-purple-500/60 transition-all duration-300";
+  card.className = "glass-panel glass-panel-hover rounded-2xl overflow-hidden flex flex-col group relative border border-white/10 hover:border-cyan-500/50 transition-all duration-300";
 
   const statusMap = {
     production: { text: "Producción", class: "status-production" },
@@ -549,11 +606,11 @@ function createProjectCard(p) {
 
   card.innerHTML = `
     <!-- Card Media & Overlay -->
-    <div class="relative h-48 w-full overflow-hidden bg-purple-950/40">
+    <div class="relative h-48 w-full overflow-hidden bg-slate-950/40">
       <img src="${p.image_url || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=900'}" 
            alt="${p.title}" 
            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out">
-      <div class="absolute inset-0 bg-gradient-to-t from-[#07040d] via-[#07040d]/40 to-transparent"></div>
+      <div class="absolute inset-0 bg-gradient-to-t from-[#06080d] via-[#06080d]/40 to-transparent"></div>
       
       <!-- Top Badges -->
       <div class="absolute top-3 left-3 right-3 flex justify-between items-center z-10">
@@ -563,14 +620,14 @@ function createProjectCard(p) {
         </span>
         
         <div class="flex items-center gap-1.5">
-          ${p.is_public ? '<span class="px-2 py-0.5 rounded-full text-[10px] bg-purple-950/80 text-purple-300 border border-purple-500/40 font-mono">Público</span>' : '<span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-950/80 text-amber-300 border border-amber-500/40 font-mono">Interno</span>'}
+          ${p.is_public ? '<span class="px-2 py-0.5 rounded-full text-[10px] bg-[#0a0e17]/90 text-cyan-300 border border-cyan-500/30 font-mono">Público</span>' : '<span class="px-2 py-0.5 rounded-full text-[10px] bg-amber-950/80 text-amber-300 border border-amber-500/40 font-mono">Interno</span>'}
           ${deleteBtnHtml}
         </div>
       </div>
 
       <!-- Category Tag -->
       <div class="absolute bottom-3 left-3 z-10">
-        <span class="text-xs uppercase tracking-wider font-semibold text-purple-300/90 bg-purple-950/80 px-2.5 py-1 rounded-md border border-purple-500/30">
+        <span class="text-xs uppercase tracking-wider font-semibold text-cyan-300 bg-[#0a0e17]/85 px-2.5 py-1 rounded-md border border-cyan-500/30">
           ${p.category}
         </span>
       </div>
@@ -579,10 +636,10 @@ function createProjectCard(p) {
     <!-- Content -->
     <div class="p-5 flex-1 flex flex-col justify-between">
       <div>
-        <h3 class="text-lg font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-1 mb-2">
+        <h3 class="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1 mb-2">
           ${p.title}
         </h3>
-        <p class="text-sm text-purple-200/70 line-clamp-2 leading-relaxed mb-4">
+        <p class="text-sm text-slate-300/80 line-clamp-2 leading-relaxed mb-4 font-normal">
           ${p.summary}
         </p>
       </div>
@@ -596,25 +653,25 @@ function createProjectCard(p) {
       </div>
 
       <!-- Footer Info -->
-      <div class="pt-4 border-t border-purple-900/30 flex items-center justify-between text-xs text-purple-300/80">
+      <div class="pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
         <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-[10px] text-white font-bold">
+          <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-[10px] text-white font-bold">
             ${p.author_name.charAt(0)}
           </div>
-          <span class="truncate max-w-[120px] font-medium">${p.author_name}</span>
+          <span class="truncate max-w-[120px] font-medium text-slate-300">${p.author_name}</span>
         </div>
 
         <div class="flex items-center gap-3">
           <!-- Like button -->
           <button onclick="event.stopPropagation(); handleToggleLike(${p.id}, this)" 
-            class="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-purple-900/40 transition-colors text-purple-300 hover:text-pink-400">
-            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            class="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white/5 transition-colors text-slate-300 hover:text-cyan-300">
+            <svg class="w-4 h-4 fill-current text-rose-500" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             <span class="font-mono font-medium">${p.likes_count}</span>
           </button>
 
           <!-- Detail link -->
           <button onclick="openDetailModal(${p.id})" 
-            class="px-3 py-1 rounded-lg bg-purple-600/20 text-purple-200 border border-purple-500/30 hover:bg-purple-600/40 hover:border-purple-400 font-medium transition-all flex items-center gap-1">
+            class="px-3 py-1 rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/20 hover:border-cyan-400 font-medium transition-all flex items-center gap-1">
             Explorar
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
           </button>
@@ -1180,6 +1237,11 @@ function renderPitchSlide() {
 
 // Terminal CLI
 function setupTerminal() {
+  const hostNode = document.getElementById("terminalHostNode");
+  if (hostNode) {
+    hostNode.textContent = (window.location.host && window.location.host !== "") ? window.location.host : "127.0.0.1 (Local)";
+  }
+
   const input = document.getElementById("terminalInput");
   if (!input) return;
   input.addEventListener("keydown", async (e) => {
@@ -1345,14 +1407,14 @@ function showToast(message, type = "info") {
 
   const toast = document.createElement("div");
   const bgColors = {
-    success: "bg-purple-900/90 border-purple-400 text-purple-100",
-    error: "bg-red-950/90 border-red-500 text-red-100",
-    info: "bg-indigo-950/90 border-indigo-500 text-indigo-100"
+    success: "bg-[#0b1322]/95 border-emerald-500/40 text-emerald-200 shadow-[0_10px_35px_rgba(16,185,129,0.25)]",
+    error: "bg-[#180a12]/95 border-rose-500/40 text-rose-200 shadow-[0_10px_35px_rgba(244,63,94,0.25)]",
+    info: "bg-[#0a0f1d]/95 border-cyan-500/40 text-cyan-200 shadow-[0_10px_35px_rgba(6,182,212,0.25)]"
   };
 
-  toast.className = `px-4 py-3 rounded-xl border backdrop-blur-md shadow-2xl flex items-center gap-3 text-sm pointer-events-auto transform translate-y-3 opacity-0 transition-all duration-300 ${bgColors[type] || bgColors.info}`;
+  toast.className = `px-4 py-3 rounded-2xl border backdrop-blur-xl shadow-2xl flex items-center gap-3 text-xs sm:text-sm font-medium pointer-events-auto transform translate-y-3 opacity-0 transition-all duration-300 ${bgColors[type] || bgColors.info}`;
   toast.innerHTML = `
-    <span class="w-2 h-2 rounded-full ${type === 'error' ? 'bg-red-400' : 'bg-purple-400'} animate-ping"></span>
+    <span class="w-2 h-2 rounded-full ${type === 'error' ? 'bg-rose-400' : (type === 'success' ? 'bg-emerald-400' : 'bg-cyan-400')} animate-ping"></span>
     <span>${message}</span>
   `;
 
@@ -1507,34 +1569,37 @@ function renderAdminEmployeesTable(employees) {
     countBadge.textContent = `${employees.length} ${employees.length === 1 ? 'Empleado' : 'Empleados'}`;
   }
 
-  const roleNameMap = {
-    admin: "👑 Administrador",
-    developer: "💻 Desarrollador",
-    qa: "🎯 QA & Testing",
-    designer: "🎨 Diseñador UI/UX",
-    manager: "📊 Project Manager",
-    employee: "👥 Colaborador"
-  };
+  const roleOptions = [
+    { value: "developer", label: "💻 Desarrollador Lead" },
+    { value: "qa", label: "🎯 QA & Testing" },
+    { value: "designer", label: "🎨 Diseñador UI/UX" },
+    { value: "manager", label: "📊 Project Manager" },
+    { value: "employee", label: "👥 Colaborador" },
+    { value: "admin", label: "👑 Administrador" }
+  ];
 
   table.innerHTML = employees.map(emp => {
-    const isFounder = emp.email.toLowerCase() === "alejandrobelno964@gmail.com" || emp.username.toLowerCase() === "japonplx";
+    const isFounder = emp.email.toLowerCase() === "alejandrobelno964@gmail.com" || (emp.username && emp.username.toLowerCase() === "japonplx");
     return `
-      <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-between gap-3">
+      <div class="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
-          <img src="${emp.avatar_url}" class="w-9 h-9 rounded-xl object-cover border border-purple-400/50">
+          <img src="${emp.avatar_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(emp.full_name) + '&background=8b5cf6&color=fff'}" class="w-10 h-10 rounded-xl object-cover border border-purple-400/50 flex-shrink-0">
           <div class="min-w-0">
             <h5 class="text-xs font-bold text-white truncate">${emp.full_name}</h5>
             <p class="text-[11px] text-purple-300/70 truncate">${emp.department || 'Kunkurt Devs'}</p>
             <span class="text-[10px] text-purple-400 font-mono">${emp.email}</span>
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-purple-900/60 border border-purple-500/40 text-purple-200 whitespace-nowrap">
-            ${roleNameMap[emp.role] || emp.role}
-          </span>
+        <div class="flex items-center gap-2 self-end sm:self-auto flex-wrap">
           ${isFounder ? `
-            <span class="text-[10px] font-bold text-fuchsia-400 px-2 py-1 rounded bg-fuchsia-950/60 border border-fuchsia-800">FUNDADOR</span>
+            <span class="text-[10px] font-bold text-fuchsia-300 px-3 py-1 rounded-lg bg-fuchsia-950/70 border border-fuchsia-800">👑 FUNDADOR (ADMIN)</span>
           ` : `
+            <div class="flex items-center gap-1.5">
+              <label class="text-[10px] text-purple-400/80">Rol:</label>
+              <select onchange="changeEmployeeRole(${emp.id}, this.value)" class="cyber-input text-xs py-1 px-2.5 bg-[#140b29] border-purple-500/50 text-purple-100 rounded-lg cursor-pointer" title="Asignar rol de empleado">
+                ${roleOptions.map(opt => `<option value="${opt.value}" ${emp.role === opt.value ? 'selected' : ''}>${opt.label}</option>`).join("")}
+              </select>
+            </div>
             <button onclick="handleDeleteEmployee(${emp.id}, '${emp.full_name}')" class="p-1.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 hover:text-white hover:bg-red-900/60 transition-colors" title="Eliminar empleado">
               🗑️
             </button>
@@ -1545,17 +1610,86 @@ function renderAdminEmployeesTable(employees) {
   }).join("");
 }
 
+async function changeEmployeeRole(userId, newRole) {
+  try {
+    const res = await fetch("/api/employees/role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, role: newRole })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✓ Rol actualizado a [${newRole.toUpperCase()}]. Guardado correctamente.`, "success");
+      await loadAuthorizedEmployees();
+      if (activeProfile && activeProfile.id === userId) {
+        switchRole(newRole);
+      }
+    } else {
+      showToast(data.error || "No se pudo actualizar el rol", "error");
+      await loadAuthorizedEmployees();
+    }
+  } catch (err) {
+    console.error("Error al actualizar rol:", err);
+    showToast("Error de conexión al asignar rol", "error");
+    await loadAuthorizedEmployees();
+  }
+}
+
 function quickFillAndLogin(email) {
   const input = document.getElementById("loginEmail");
   if (input) input.value = email;
-  const form = document.getElementById("authLoginForm");
-  if (form) form.dispatchEvent(new Event("submit", { cancelable: true }));
+  switchAuthTab("login");
+}
+
+function switchAuthTab(tab) {
+  const loginBtn = document.getElementById("authTabLoginBtn");
+  const regBtn = document.getElementById("authTabRegisterBtn");
+  const loginPane = document.getElementById("authLoginPane");
+  const regPane = document.getElementById("authRegisterPane");
+
+  if (tab === "login") {
+    if (loginBtn) loginBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-fuchsia-500 text-fuchsia-300 transition-colors";
+    if (regBtn) regBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-transparent text-purple-400 hover:text-purple-200 transition-colors";
+    if (loginPane) loginPane.classList.remove("hidden");
+    if (regPane) regPane.classList.add("hidden");
+  } else {
+    if (regBtn) regBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-fuchsia-500 text-fuchsia-300 transition-colors";
+    if (loginBtn) loginBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-transparent text-purple-400 hover:text-purple-200 transition-colors";
+    if (regPane) regPane.classList.remove("hidden");
+    if (loginPane) loginPane.classList.add("hidden");
+  }
+}
+
+function switchAdminTab(tab) {
+  const usersBtn = document.getElementById("adminTabUsersBtn");
+  const smtpBtn = document.getElementById("adminTabSmtpBtn");
+  const usersPane = document.getElementById("adminTabUsersPane");
+  const smtpPane = document.getElementById("adminTabSmtpPane");
+
+  if (tab === "users") {
+    if (usersBtn) usersBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-emerald-400 text-emerald-300 transition-colors";
+    if (smtpBtn) smtpBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-transparent text-purple-400 hover:text-purple-200 transition-colors";
+    if (usersPane) usersPane.classList.remove("hidden");
+    if (smtpPane) smtpPane.classList.add("hidden");
+  } else {
+    if (smtpBtn) smtpBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-emerald-400 text-emerald-300 transition-colors";
+    if (usersBtn) usersBtn.className = "pb-3 px-4 text-xs font-bold border-b-2 border-transparent text-purple-400 hover:text-purple-200 transition-colors";
+    if (smtpPane) smtpPane.classList.remove("hidden");
+    if (usersPane) usersPane.classList.add("hidden");
+    loadSmtpSettings();
+  }
 }
 
 function openLoginModal() {
   const modal = document.getElementById("loginModal");
   if (modal) modal.classList.remove("hidden");
-  loadAuthorizedEmployees();
+  switchAuthTab("login");
+  const emailInput = document.getElementById("loginEmail");
+  if (emailInput && !localStorage.getItem("kunkurt_saved_login_email")) {
+    emailInput.value = "";
+  }
+  const passInput = document.getElementById("loginPassword");
+  if (passInput) passInput.value = "";
 }
 
 function closeLoginModal() {
@@ -1566,12 +1700,113 @@ function closeLoginModal() {
 function openEmployeeAdminModal() {
   const modal = document.getElementById("employeeAdminModal");
   if (modal) modal.classList.remove("hidden");
+  switchAdminTab("users");
   loadAuthorizedEmployees();
+  loadSmtpSettings();
 }
 
 function closeEmployeeAdminModal() {
   const modal = document.getElementById("employeeAdminModal");
   if (modal) modal.classList.add("hidden");
+}
+
+async function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const nameInput = document.getElementById("regFullName");
+  const usernameInput = document.getElementById("regUsername");
+  const emailInput = document.getElementById("regEmail");
+  const passInput = document.getElementById("regPassword");
+  const deptInput = document.getElementById("regDept");
+  const submitBtn = document.getElementById("btnRegisterSubmit");
+
+  const full_name = nameInput ? nameInput.value.trim() : "";
+  const username = usernameInput ? usernameInput.value.trim().toLowerCase() : "";
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+  const password = passInput ? passInput.value.trim() : "";
+  const department = deptInput && deptInput.value.trim() ? deptInput.value.trim() : "Equipo Kunkurt Devs";
+
+  if (!full_name || !email || !password) {
+    showToast("Por favor completa nombre, correo y contraseña", "error");
+    return;
+  }
+
+  const originalText = submitBtn ? submitBtn.innerHTML : "";
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span>⏳ Creando tu cuenta...</span>`;
+  }
+
+  const roleNameMap = {
+    admin: "Director General / Administrador",
+    developer: "Desarrollador Lead & Arquitecto",
+    qa: "QA & Testing Lead",
+    designer: "Diseñador UI/UX & Frontend",
+    manager: "Project Manager & Scrum Master",
+    employee: "Colaborador / Soporte",
+    public: "Vista Portafolio Cliente"
+  };
+
+  const badgeClassMap = {
+    admin: "from-pink-500 to-purple-600",
+    developer: "from-violet-500 to-indigo-600",
+    qa: "from-cyan-500 to-blue-600",
+    designer: "from-fuchsia-500 to-pink-600",
+    manager: "from-emerald-500 to-teal-600",
+    employee: "from-indigo-500 to-purple-600",
+    public: "from-slate-600 to-slate-700"
+  };
+
+  try {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, username, email, password, department })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const user = data.user || {};
+      const userRole = user.role || "employee";
+
+      const verifiedProfile = {
+        id: user.id || Date.now(),
+        username: user.username || email.split("@")[0],
+        name: user.full_name || full_name,
+        email: email,
+        role: userRole,
+        roleName: roleNameMap[userRole] || "Colaborador",
+        department: user.department || department,
+        avatar: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(full_name)}&background=8b5cf6&color=fff`,
+        badgeClass: badgeClassMap[userRole] || "from-indigo-500 to-purple-600",
+        points: user.points || 150
+      };
+
+      PROFILES[userRole] = verifiedProfile;
+      currentRole = userRole;
+      activeProfile = verifiedProfile;
+
+      localStorage.setItem("kunkurt_active_role", currentRole);
+      localStorage.setItem("kunkurt_active_profile", JSON.stringify(activeProfile));
+
+      const roleSelect = document.getElementById("roleSelect");
+      if (roleSelect) roleSelect.value = userRole;
+
+      updateRoleUI();
+      closeLoginModal();
+      showToast(`¡Cuenta creada con éxito! Bienvenido ${full_name}. El Administrador te asignará tu rol especializado. 📧`, "success");
+      await loadAuthorizedEmployees();
+      await loadNotifications();
+    } else {
+      showToast(data.error || "No se pudo registrar la cuenta", "error");
+    }
+  } catch (err) {
+    console.error("Error en registro:", err);
+    showToast("Error de conexión al registrarse", "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  }
 }
 
 async function handleCreateEmployee(e) {
@@ -1606,11 +1841,12 @@ async function handleCreateEmployee(e) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(`✓ Empleado ${fullName} dado de alta como [${role.toUpperCase()}] exitosamente`, "success");
+      showToast(`✓ Empleado ${fullName} dado de alta como [${role.toUpperCase()}]. 📧 Correo despachado a ${email}`, "success");
       if (nameInput) nameInput.value = "";
       if (emailInput) emailInput.value = "";
       if (deptInput) deptInput.value = "";
       await loadAuthorizedEmployees();
+      await loadNotifications();
     } else {
       showToast(data.error || "Error al registrar empleado", "error");
     }
@@ -1649,18 +1885,22 @@ async function handleDeleteEmployee(empId, name) {
 async function handleLoginSubmit(e) {
   e.preventDefault();
   const emailInput = document.getElementById("loginEmail");
+  const passInput = document.getElementById("loginPassword");
+  const rememberCheck = document.getElementById("rememberMeCheck");
   const submitBtn = document.getElementById("btnLoginSubmit");
-  const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+  const identifier = emailInput ? emailInput.value.trim() : "";
+  const password = passInput ? passInput.value.trim() : "";
+  const remember = rememberCheck ? rememberCheck.checked : true;
 
-  if (!email) {
-    showToast("Por favor ingresa tu correo electrónico corporativo", "error");
+  if (!identifier) {
+    showToast("Por favor ingresa tu usuario o correo electrónico", "error");
     return;
   }
 
   const originalText = submitBtn ? submitBtn.innerHTML : "";
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = `<span>⏳ Verificando autorización del Administrador...</span>`;
+    submitBtn.innerHTML = `<span>⏳ Verificando credenciales...</span>`;
   }
 
   const roleNameMap = {
@@ -1687,7 +1927,7 @@ async function handleLoginSubmit(e) {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ identifier, password })
     });
     const data = await res.json();
 
@@ -1697,48 +1937,241 @@ async function handleLoginSubmit(e) {
 
       const verifiedProfile = {
         id: user.id || Date.now(),
-        username: user.username || email.split("@")[0],
-        name: user.full_name || email.split("@")[0].title(),
-        email: email,
+        username: user.username || identifier.split("@")[0],
+        name: user.full_name || identifier.split("@")[0],
+        email: user.email || identifier,
         role: userRole,
         roleName: roleNameMap[userRole] || userRole.toUpperCase(),
         department: user.department || "Equipo Kunkurt Devs",
-        avatar: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || email)}&background=8b5cf6&color=fff`,
-        badgeClass: badgeClassMap[userRole] || "from-violet-500 to-indigo-600"
+        avatar: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || identifier)}&background=8b5cf6&color=fff`,
+        badgeClass: badgeClassMap[userRole] || "from-violet-500 to-indigo-600",
+        points: user.points || 150
       };
 
       PROFILES[userRole] = verifiedProfile;
       currentRole = userRole;
       activeProfile = verifiedProfile;
 
-      localStorage.setItem("kunkurt_active_role", currentRole);
-      localStorage.setItem("kunkurt_active_profile", JSON.stringify(activeProfile));
+      if (remember) {
+        localStorage.setItem("kunkurt_active_role", currentRole);
+        localStorage.setItem("kunkurt_active_profile", JSON.stringify(activeProfile));
+        if (data.session_token) localStorage.setItem("kunkurt_session_token", data.session_token);
+      }
 
       const roleSelect = document.getElementById("roleSelect");
       if (roleSelect) roleSelect.value = userRole;
 
       updateRoleUI();
       closeLoginModal();
-      showToast(`¡Acceso autorizado! Bienvenido ${verifiedProfile.name} [${verifiedProfile.roleName}]. Alerta enviada a ${email} 📧`, "success");
+      showToast(`¡Acceso exitoso! Bienvenido ${verifiedProfile.name} [${verifiedProfile.roleName}]. Notificación enviada 📧`, "success");
+      await loadAuthorizedEmployees();
+      await loadNotifications();
+      await loadTickets();
     } else {
-      showToast(data.error || "Acceso denegado: Solicita a tu Administrador tu alta de usuario.", "error");
+      showToast(data.error || "Acceso denegado: Por favor verifica tus credenciales.", "error");
     }
   } catch (err) {
     console.error("Error en login:", err);
     // Offline / fallback for founding admin
-    if (email === "alejandrobelno964@gmail.com" || email.includes("japon")) {
+    if (identifier.toLowerCase() === "alejandrobelno964@gmail.com" || identifier.toLowerCase().includes("japon")) {
       currentRole = "admin";
       activeProfile = PROFILES.admin;
       updateRoleUI();
       closeLoginModal();
       showToast(`Sesión activa como JaponPLX (Administrador Fundador)`, "success");
     } else {
-      showToast("❌ Acceso restringido: Solo el Administrador puede registrar nuevos empleados.", "error");
+      showToast("❌ Error de conexión al iniciar sesión.", "error");
     }
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;
+    }
+  }
+}
+
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    input.type = input.type === "password" ? "text" : "password";
+  }
+}
+
+function openUserProfileModal() {
+  const modal = document.getElementById("userProfileModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+
+  const avatar = document.getElementById("profileModalAvatar");
+  const name = document.getElementById("profileModalName");
+  const email = document.getElementById("profileModalEmail");
+  const roleBadge = document.getElementById("profileModalRoleBadge");
+  const dept = document.getElementById("profileModalDept");
+  const points = document.getElementById("profileModalPoints");
+
+  if (avatar) avatar.src = activeProfile?.avatar || "";
+  if (name) name.textContent = activeProfile?.name || "Usuario";
+  if (email) email.textContent = activeProfile?.email || "Sin correo configurado";
+  if (roleBadge) {
+    roleBadge.textContent = activeProfile?.roleName || currentRole.toUpperCase();
+    roleBadge.className = `text-xs font-bold px-3 py-1 rounded-full bg-gradient-to-r ${activeProfile?.badgeClass || 'from-violet-500 to-indigo-600'} text-white`;
+  }
+  if (dept) dept.textContent = activeProfile?.department || "Equipo Kunkurt Devs";
+  if (points) points.textContent = `${activeProfile?.points || 150} pts`;
+}
+
+function closeUserProfileModal() {
+  const modal = document.getElementById("userProfileModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function handleLogout() {
+  localStorage.removeItem("kunkurt_active_role");
+  localStorage.removeItem("kunkurt_active_profile");
+  currentRole = "public";
+  activeProfile = PROFILES.public;
+
+  const roleSelect = document.getElementById("roleSelect");
+  if (roleSelect) roleSelect.value = "public";
+
+  updateRoleUI();
+  loadProjects();
+  showToast("Sesión cerrada. Ahora estás en modo Vista de Cliente (Público sin sesión).", "info");
+}
+
+// ============================================================================
+// CONFIGURACIÓN SMTP (GMAIL REAL)
+// ============================================================================
+async function loadSmtpSettings() {
+  const statusBox = document.getElementById("smtpStatusBox");
+  try {
+    const res = await fetch("/api/settings/smtp");
+    const data = await res.json();
+    if (data.success && data.settings) {
+      const s = data.settings;
+      const hostInput = document.getElementById("smtpHost");
+      const portInput = document.getElementById("smtpPort");
+      const userInput = document.getElementById("smtpUser");
+      const senderNameInput = document.getElementById("smtpSenderName");
+      const senderEmailInput = document.getElementById("smtpSenderEmail");
+
+      if (hostInput && s.smtp_host) hostInput.value = s.smtp_host;
+      if (portInput && s.smtp_port) portInput.value = s.smtp_port;
+      if (userInput && s.smtp_user) userInput.value = s.smtp_user;
+      if (senderNameInput && s.smtp_sender_name) senderNameInput.value = s.smtp_sender_name;
+      if (senderEmailInput && s.smtp_sender_email) senderEmailInput.value = s.smtp_sender_email;
+
+      if (statusBox) {
+        if (s.is_configured) {
+          statusBox.innerHTML = `
+            <div class="flex items-center gap-2 text-emerald-400 font-semibold mb-1">
+              <span>🟢</span> SMTP Activo para Envíos Reales
+            </div>
+            <p class="text-purple-300/80">Conectado al servidor <strong>${s.smtp_host}</strong> con usuario <strong>${s.smtp_user}</strong>. Las notificaciones de seguridad y altas de empleados se entregan a bandejas de entrada reales.</p>
+          `;
+        } else {
+          statusBox.innerHTML = `
+            <div class="flex items-center gap-2 text-amber-400 font-semibold mb-1">
+              <span>⚠️</span> Modo Simulación Local Activo
+            </div>
+            <p class="text-purple-300/80">Aún no se ha guardado una contraseña de aplicación de Gmail. Los correos se simulan y se registran en el archivo local de logs del servidor.</p>
+          `;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error cargando configuración SMTP:", err);
+  }
+}
+
+async function handleSaveSmtpSettings(e) {
+  if (e) e.preventDefault();
+  const host = document.getElementById("smtpHost")?.value.trim();
+  const port = document.getElementById("smtpPort")?.value.trim();
+  const user = document.getElementById("smtpUser")?.value.trim();
+  const password = document.getElementById("smtpPass")?.value.trim();
+  const sender_name = document.getElementById("smtpSenderName")?.value.trim();
+  const sender_email = document.getElementById("smtpSenderEmail")?.value.trim();
+  const btn = document.getElementById("btnSaveSmtp");
+
+  if (!host || !port || !user) {
+    showToast("Por favor ingresa servidor, puerto y tu correo Gmail", "error");
+    return;
+  }
+
+  const origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Guardando credenciales SMTP...</span>`;
+  }
+
+  try {
+    const res = await fetch("/api/settings/smtp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        smtp_host: host,
+        smtp_port: parseInt(port) || 587,
+        smtp_user: user,
+        smtp_password: password,
+        smtp_sender_name: sender_name,
+        smtp_sender_email: sender_email
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast("✓ Configuración SMTP guardada con éxito", "success");
+      const passInput = document.getElementById("smtpPass");
+      if (passInput) passInput.value = "";
+      await loadSmtpSettings();
+    } else {
+      showToast(data.error || "Error al guardar SMTP", "error");
+    }
+  } catch (err) {
+    console.error("Error guardando SMTP:", err);
+    showToast("Error de conexión al guardar SMTP", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
+
+async function handleTestSmtp() {
+  const user = document.getElementById("smtpUser")?.value.trim();
+  const btn = document.getElementById("btnTestSmtp");
+  if (!user) {
+    showToast("Ingresa tu correo Gmail en el campo correspondiente", "error");
+    return;
+  }
+
+  const origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Enviando prueba a ${user}...</span>`;
+  }
+
+  try {
+    const res = await fetch("/api/settings/smtp/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to_email: user })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✓ ¡Correo enviado con éxito a ${user}! Revisa tu bandeja de entrada o spam 📬`, "success");
+      await loadSmtpSettings();
+    } else {
+      alert(`Resultado de la prueba SMTP:\n\n${data.error || "No se pudo conectar al servidor"}`);
+    }
+  } catch (err) {
+    console.error("Error enviando prueba SMTP:", err);
+    showToast("Error de conexión al probar SMTP", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
     }
   }
 }
@@ -1750,20 +2183,28 @@ async function openShareModal() {
   const modal = document.getElementById("shareModal");
   if (modal) modal.classList.remove("hidden");
 
+  const localInput = document.getElementById("shareLocalUrl");
+  const lanInput = document.getElementById("shareLanUrl");
+
+  const currentOrigin = (window.location.origin && window.location.origin !== "null") 
+    ? window.location.origin 
+    : `http://localhost:${window.location.port || '8080'}`;
+
+  if (localInput) localInput.value = currentOrigin;
+
   try {
     const res = await fetch("/api/network-info");
     const data = await res.json();
     if (data.success) {
-      const localInput = document.getElementById("shareLocalUrl");
-      const lanInput = document.getElementById("shareLanUrl");
-      if (localInput) localInput.value = data.local_url;
-      if (lanInput) lanInput.value = data.lan_url;
+      if (localInput && data.local_url) localInput.value = data.local_url;
+      if (lanInput && data.lan_url) lanInput.value = data.lan_url;
     }
   } catch (e) {
-    const localInput = document.getElementById("shareLocalUrl");
-    const lanInput = document.getElementById("shareLanUrl");
-    if (localInput) localInput.value = window.location.origin || "http://localhost:8080";
-    if (lanInput) lanInput.value = `http://${window.location.hostname || '127.0.0.1'}:8080`;
+    if (lanInput) {
+      lanInput.value = (window.location.hostname && window.location.hostname !== "") 
+        ? `http://${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}` 
+        : currentOrigin;
+    }
   }
 }
 
@@ -1802,19 +2243,1423 @@ function fallbackCopy(text) {
   document.body.removeChild(textArea);
 }
 
+// ============================================================================
+// SECTOR DE TICKETS & MESA DE AYUDA LIVE
+// ============================================================================
+let ticketsList = [];
+let currentTicket = null;
+
+function switchToSection(section) {
+  playCyberSound("click");
+  const catalogSection = document.getElementById("catalogSection");
+  const ticketsSection = document.getElementById("ticketsSection");
+  const quotationSection = document.getElementById("quotationSection");
+  const analyticsSection = document.getElementById("analyticsSection");
+  const teamChatSection = document.getElementById("teamChatSection");
+  const wikiSection = document.getElementById("wikiSection");
+
+  const sections = {
+    projects: catalogSection,
+    tickets: ticketsSection,
+    quotation: quotationSection,
+    analytics: analyticsSection,
+    teamChat: teamChatSection,
+    wiki: wikiSection
+  };
+
+  const tabs = {
+    projects: document.getElementById("tabViewProjectsBtn"),
+    tickets: document.getElementById("tabViewTicketsBtn"),
+    quotation: document.getElementById("tabViewQuoteBtn"),
+    analytics: document.getElementById("tabViewAnalyticsBtn"),
+    teamChat: document.getElementById("tabViewTeamChatBtn"),
+    wiki: document.getElementById("tabViewWikiBtn")
+  };
+
+  const activeTabClass = "pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 border-cyan-400 text-cyan-300 transition-all flex items-center gap-1.5 whitespace-nowrap";
+  const inactiveTabClass = "pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 whitespace-nowrap";
+
+  // Hide all sections, deactivate all tabs
+  Object.keys(sections).forEach(key => {
+    if (sections[key]) {
+      sections[key].classList.add("hidden");
+      sections[key].classList.remove("section-fade-in");
+    }
+    if (tabs[key]) tabs[key].className = inactiveTabClass;
+  });
+
+  // Activate target section and tab
+  const targetSection = sections[section] || catalogSection;
+  const targetTab = tabs[section] || tabs.projects;
+
+  if (targetSection) {
+    targetSection.classList.remove("hidden");
+    targetSection.classList.add("section-fade-in");
+  }
+  if (targetTab) targetTab.className = activeTabClass;
+
+  // Trigger relevant loaders
+  if (section === "tickets") {
+    loadTickets();
+  } else if (section === "quotation") {
+    calculateQuotation();
+  } else if (section === "analytics") {
+    loadAnalyticsData();
+  } else if (section === "teamChat") {
+    loadTeamMessages();
+  } else if (section === "wiki") {
+    loadWikiArticles();
+  }
+
+  targetSection?.scrollIntoView({ behavior: "smooth" });
+}
+
+async function loadTickets() {
+  const statusSelect = document.getElementById("ticketStatusFilter");
+  const prioritySelect = document.getElementById("ticketPriorityFilter");
+  const categorySelect = document.getElementById("ticketCategoryFilter");
+  const searchInput = document.getElementById("ticketSearchInput");
+
+  const status = statusSelect ? statusSelect.value : "all";
+  const priority = prioritySelect ? prioritySelect.value : "all";
+  const category = categorySelect ? categorySelect.value : "all";
+  const search = searchInput ? searchInput.value.trim() : "";
+
+  let url = `/api/tickets?status=${encodeURIComponent(status)}&priority=${encodeURIComponent(priority)}&category=${encodeURIComponent(category)}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.success) {
+      ticketsList = data.tickets || [];
+      const stats = data.stats || { total: 0, abiertos: 0, en_progreso: 0, resueltos: 0 };
+
+      // Update counters in badges
+      const navBadge = document.getElementById("navTicketsBadge");
+      const tabCounter = document.getElementById("tabTicketsCounter");
+      if (navBadge) navBadge.textContent = stats.abiertos || ticketsList.length;
+      if (tabCounter) tabCounter.textContent = ticketsList.length;
+
+      // Update Stats cards
+      const statTotal = document.getElementById("ticketStatTotal");
+      const statOpen = document.getElementById("ticketStatOpen");
+      const statProg = document.getElementById("ticketStatInProgress");
+      const statRes = document.getElementById("ticketStatResolved");
+
+      if (statTotal) statTotal.textContent = stats.total;
+      if (statOpen) statOpen.textContent = stats.abiertos;
+      if (statProg) statProg.textContent = stats.en_progreso;
+      if (statRes) statRes.textContent = stats.resueltos;
+
+      renderTickets(ticketsList);
+    }
+  } catch (err) {
+    console.warn("Error cargando tickets:", err);
+  }
+}
+
+function renderTickets(tickets) {
+  const grid = document.getElementById("ticketsGrid");
+  const emptyState = document.getElementById("ticketsEmptyState");
+  if (!grid) return;
+
+  if (!tickets || tickets.length === 0) {
+    grid.innerHTML = "";
+    if (emptyState) emptyState.classList.remove("hidden");
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add("hidden");
+
+  const priorityBadgeMap = {
+    critica: "bg-red-500/20 text-red-300 border-red-500/40",
+    alta: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+    media: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
+    baja: "bg-blue-500/20 text-blue-300 border-blue-500/40"
+  };
+
+  const statusBadgeMap = {
+    abierto: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+    en_progreso: "bg-purple-500/20 text-purple-300 border-purple-500/40",
+    en_revision: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+    resuelto: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+    cerrado: "bg-slate-700 text-slate-300 border-slate-600"
+  };
+
+  const statusNameMap = {
+    abierto: "🟡 Abierto",
+    en_progreso: "🟣 En Progreso",
+    en_revision: "🔵 En Revisión",
+    resuelto: "🟢 Resuelto",
+    cerrado: "⚪ Cerrado"
+  };
+
+  grid.innerHTML = tickets.map(t => {
+    const pBadge = priorityBadgeMap[t.priority] || priorityBadgeMap.media;
+    const sBadge = statusBadgeMap[t.status] || statusBadgeMap.abierto;
+    const sName = statusNameMap[t.status] || t.status.toUpperCase();
+
+    return `
+      <div class="glass-panel p-5 rounded-3xl border border-purple-500/20 hover:border-purple-400/60 transition-all flex flex-col justify-between group shadow-[0_0_20px_rgba(168,85,247,0.08)] hover:shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+        <div class="space-y-3">
+          <!-- Top Row: Code + Priority + Status -->
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-fuchsia-950/80 border border-fuchsia-500/40 text-fuchsia-300">
+                ${t.ticket_code}
+              </span>
+              <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${pBadge}">
+                ${t.priority}
+              </span>
+            </div>
+            <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${sBadge}">
+              ${sName}
+            </span>
+          </div>
+
+          <!-- Title -->
+          <h4 class="text-base font-bold text-white group-hover:text-purple-200 transition-colors line-clamp-2">
+            ${t.title}
+          </h4>
+
+          <!-- Description Preview -->
+          <p class="text-xs text-purple-300/80 line-clamp-3 leading-relaxed">
+            ${t.description}
+          </p>
+
+          <!-- Category & Project Pill -->
+          <div class="flex items-center gap-2 pt-1 flex-wrap">
+            <span class="text-[10px] px-2 py-0.5 rounded-lg bg-purple-950/80 border border-purple-900/50 text-purple-300">
+              🏷️ ${t.category || 'Soporte'}
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded-lg bg-indigo-950/80 border border-indigo-900/50 text-indigo-300">
+              📦 ${t.project_title || 'General'}
+            </span>
+          </div>
+        </div>
+
+        <!-- Footer: Author, Assignee & Actions -->
+        <div class="pt-4 mt-4 border-t border-purple-900/40 space-y-3">
+          <div class="flex items-center justify-between text-[11px] text-purple-300/70">
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="text-purple-400">Por:</span>
+              <strong class="text-white truncate">${t.author_name}</strong>
+            </div>
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="text-purple-400">Dev:</span>
+              <span class="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-purple-200 font-semibold truncate">
+                ${t.assigned_name || 'Sin Asignar'}
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] text-purple-400 flex items-center gap-1 font-mono">
+              💬 ${t.comments_count || 0} comentarios
+            </span>
+            <button onclick="openTicketDetail(${t.id})" class="btn-ghost-neon text-xs py-1.5 px-3 border-fuchsia-500/40 text-fuchsia-200 hover:text-white">
+              Gestionar Caso →
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function filterTickets() {
+  loadTickets();
+}
+
+function resetTicketFilters() {
+  const statusSelect = document.getElementById("ticketStatusFilter");
+  const prioritySelect = document.getElementById("ticketPriorityFilter");
+  const categorySelect = document.getElementById("ticketCategoryFilter");
+  const searchInput = document.getElementById("ticketSearchInput");
+
+  if (statusSelect) statusSelect.value = "all";
+  if (prioritySelect) prioritySelect.value = "all";
+  if (categorySelect) categorySelect.value = "all";
+  if (searchInput) searchInput.value = "";
+  loadTickets();
+}
+
+function openCreateTicketModal() {
+  const modal = document.getElementById("createTicketModal");
+  if (modal) modal.classList.remove("hidden");
+
+  // Autofill name and email if user is logged in
+  const nameInput = document.getElementById("ticketAuthorName");
+  const emailInput = document.getElementById("ticketAuthorEmail");
+  if (nameInput && !nameInput.value && activeProfile && activeProfile.name) {
+    nameInput.value = activeProfile.name;
+  }
+  if (emailInput && !emailInput.value && activeProfile && activeProfile.email) {
+    emailInput.value = activeProfile.email;
+  }
+
+  // Populate projects select
+  const projSelect = document.getElementById("ticketProjectSelect");
+  if (projSelect) {
+    const projects = PROJECTS_CACHE || [];
+    projSelect.innerHTML = `<option value="General">General (Infraestructura / Plataforma)</option>` +
+      projects.map(p => `<option value="${p.title}">${p.title}</option>`).join("");
+  }
+
+  // Populate assignee select with employees
+  const assignSelect = document.getElementById("ticketAssigneeSelect");
+  if (assignSelect) {
+    assignSelect.innerHTML = `<option value="">-- Sin Asignar (Abierto a Devs) --</option>` +
+      authorizedEmployeesList.map(emp => `<option value="${emp.id}">${emp.full_name} (${emp.role.toUpperCase()})</option>`).join("");
+  }
+}
+
+function closeCreateTicketModal() {
+  const modal = document.getElementById("createTicketModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function handleCreateTicketSubmit(e) {
+  e.preventDefault();
+  const title = document.getElementById("ticketTitle")?.value.trim();
+  const category = document.getElementById("ticketCategory")?.value;
+  const priority = document.getElementById("ticketPriority")?.value;
+  const project_title = document.getElementById("ticketProjectSelect")?.value;
+  const assigned_id = document.getElementById("ticketAssigneeSelect")?.value || null;
+  const author_name = document.getElementById("ticketAuthorName")?.value.trim();
+  const author_email = document.getElementById("ticketAuthorEmail")?.value.trim();
+  const description = document.getElementById("ticketDescription")?.value.trim();
+  const btn = document.getElementById("btnSubmitTicket");
+
+  if (!title || !description || !author_email || !author_name) {
+    showToast("Por favor completa los campos obligatorios", "error");
+    return;
+  }
+
+  const origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Registrando ticket...</span>`;
+  }
+
+  try {
+    const res = await fetch("/api/tickets/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        description,
+        category,
+        priority,
+        project_title,
+        author_name,
+        author_email,
+        author_role: currentRole,
+        assigned_id: assigned_id ? parseInt(assigned_id) : null
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✓ Ticket #${data.ticket?.ticket_code || ''} abierto exitosamente.`, "success");
+      closeCreateTicketModal();
+      document.getElementById("createTicketForm")?.reset();
+      await loadTickets();
+      await loadNotifications();
+      switchToSection("tickets");
+    } else {
+      showToast(data.error || "Error al crear ticket", "error");
+    }
+  } catch (err) {
+    console.error("Error creando ticket:", err);
+    showToast("Error de conexión al abrir ticket", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
+
+async function openTicketDetail(ticketId) {
+  const modal = document.getElementById("ticketDetailModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+
+  try {
+    const res = await fetch(`/api/tickets/${ticketId}`);
+    const data = await res.json();
+    if (data.success && data.ticket) {
+      currentTicket = data.ticket;
+      renderTicketDetailModal(currentTicket);
+    } else {
+      showToast("No se pudo cargar el ticket", "error");
+      closeTicketDetailModal();
+    }
+  } catch (err) {
+    console.error("Error cargando detalle ticket:", err);
+    showToast("Error de conexión", "error");
+  }
+}
+
+function renderTicketDetailModal(t) {
+  const code = document.getElementById("detailTicketCode");
+  const title = document.getElementById("detailTicketTitle");
+  const author = document.getElementById("detailTicketAuthor");
+  const project = document.getElementById("detailTicketProject");
+  const desc = document.getElementById("detailTicketDescription");
+  const statusBadge = document.getElementById("detailTicketStatusBadge");
+  const priorityBadge = document.getElementById("detailTicketPriorityBadge");
+  const categoryBadge = document.getElementById("detailTicketCategoryBadge");
+  const statusSelect = document.getElementById("detailTicketStatusSelect");
+  const assigneeSelect = document.getElementById("detailTicketAssigneeSelect");
+  const commentsList = document.getElementById("detailTicketCommentsList");
+  const commentsCount = document.getElementById("detailTicketCommentsCount");
+
+  if (code) code.textContent = t.ticket_code;
+  if (title) title.textContent = t.title;
+  if (author) author.textContent = `${t.author_name} (${t.author_email})`;
+  if (project) project.textContent = t.project_title || "General";
+  if (desc) desc.textContent = t.description;
+
+  if (statusBadge) {
+    statusBadge.textContent = t.status.toUpperCase();
+    statusBadge.className = `text-[10px] font-bold px-2.5 py-0.5 rounded-full ${t.status === 'resuelto' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'}`;
+  }
+  if (priorityBadge) {
+    priorityBadge.textContent = t.priority.toUpperCase();
+    priorityBadge.className = `text-[10px] font-bold px-2 py-0.5 rounded-full ${t.priority === 'critica' ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`;
+  }
+  if (categoryBadge) categoryBadge.textContent = t.category || "Soporte";
+
+  if (statusSelect) statusSelect.value = t.status;
+
+  if (assigneeSelect) {
+    assigneeSelect.innerHTML = `<option value="">-- Sin Asignar --</option>` +
+      authorizedEmployeesList.map(emp => `<option value="${emp.id}" ${t.assigned_id == emp.id ? 'selected' : ''}>${emp.full_name} (${emp.role})</option>`).join("");
+  }
+
+  const comments = t.comments || [];
+  if (commentsCount) commentsCount.textContent = `${comments.length} ${comments.length === 1 ? 'Respuesta' : 'Respuestas'}`;
+
+  if (commentsList) {
+    commentsList.innerHTML = comments.map(c => `
+      <div class="p-3 rounded-2xl bg-black/40 border border-purple-900/40 flex items-start gap-3">
+        <img src="${c.user_avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.user_name) + '&background=8b5cf6&color=fff'}" class="w-8 h-8 rounded-xl object-cover border border-purple-500/30 flex-shrink-0">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between gap-2 mb-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-white">${c.user_name}</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 font-mono">${c.user_role}</span>
+            </div>
+            <span class="text-[10px] text-purple-400/60">${c.created_at || 'Reciente'}</span>
+          </div>
+          <p class="text-xs text-purple-200/90 leading-relaxed whitespace-pre-line">${c.content}</p>
+        </div>
+      </div>
+    `).join("");
+  }
+}
+
+function closeTicketDetailModal() {
+  const modal = document.getElementById("ticketDetailModal");
+  if (modal) modal.classList.add("hidden");
+  currentTicket = null;
+}
+
+async function updateTicketStatusFromModal(newStatus) {
+  if (!currentTicket) return;
+  try {
+    const res = await fetch("/api/tickets/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticket_id: currentTicket.id,
+        status: newStatus,
+        updated_by_name: activeProfile?.name || "Colaborador Kunkurt"
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.ticket) {
+      currentTicket = data.ticket;
+      renderTicketDetailModal(currentTicket);
+      showToast(`✓ Estado del ticket actualizado a [${newStatus.toUpperCase()}]`, "success");
+      await loadTickets();
+      await loadNotifications();
+    }
+  } catch (err) {
+    console.error("Error al actualizar estado de ticket:", err);
+    showToast("Error al actualizar estado", "error");
+  }
+}
+
+async function assignTicketFromModal(userId) {
+  if (!currentTicket || !userId) return;
+  try {
+    const res = await fetch("/api/tickets/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticket_id: currentTicket.id,
+        user_id: parseInt(userId),
+        assigned_by_name: activeProfile?.name || "Administrador"
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.ticket) {
+      currentTicket = data.ticket;
+      renderTicketDetailModal(currentTicket);
+      showToast(`✓ Ticket asignado con éxito`, "success");
+      await loadTickets();
+      await loadNotifications();
+    }
+  } catch (err) {
+    console.error("Error al asignar ticket:", err);
+    showToast("Error al asignar ticket", "error");
+  }
+}
+
+async function handleTicketReplySubmit(e) {
+  e.preventDefault();
+  if (!currentTicket) return;
+  const input = document.getElementById("ticketReplyInput");
+  const content = input ? input.value.trim() : "";
+  const btn = document.getElementById("btnTicketReplySubmit");
+
+  if (!content) return;
+
+  const origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span>⏳ Enviando...</span>`;
+  }
+
+  try {
+    const res = await fetch("/api/tickets/comment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticket_id: currentTicket.id,
+        user_name: activeProfile?.name || "Colaborador Kunkurt",
+        user_email: activeProfile?.email || "soporte@kunkurt.com",
+        user_role: currentRole,
+        user_avatar: activeProfile?.avatar || "",
+        content: content
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (input) input.value = "";
+      showToast("✓ Respuesta publicada", "success");
+      await openTicketDetail(currentTicket.id);
+      await loadTickets();
+    }
+  } catch (err) {
+    console.error("Error agregando respuesta:", err);
+    showToast("Error al enviar respuesta", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  }
+}
+
 // Expose modal handlers to global window scope for inline onclicks
 window.openGithubSyncModal = openGithubSyncModal;
 window.closeGithubSyncModal = closeGithubSyncModal;
 window.executeGithubSync = executeGithubSync;
 window.openLoginModal = openLoginModal;
 window.closeLoginModal = closeLoginModal;
+window.switchAuthTab = switchAuthTab;
+window.switchAdminTab = switchAdminTab;
 window.openEmployeeAdminModal = openEmployeeAdminModal;
 window.closeEmployeeAdminModal = closeEmployeeAdminModal;
+window.changeEmployeeRole = changeEmployeeRole;
 window.handleCreateEmployee = handleCreateEmployee;
 window.handleDeleteEmployee = handleDeleteEmployee;
 window.quickFillAndLogin = quickFillAndLogin;
 window.handleLoginSubmit = handleLoginSubmit;
+window.handleRegisterSubmit = handleRegisterSubmit;
+window.handleLogout = handleLogout;
+window.loadSmtpSettings = loadSmtpSettings;
+window.handleSaveSmtpSettings = handleSaveSmtpSettings;
+window.handleTestSmtp = handleTestSmtp;
 window.openShareModal = openShareModal;
 window.closeShareModal = closeShareModal;
 window.copyToClipboard = copyToClipboard;
+window.switchToSection = switchToSection;
+window.loadTickets = loadTickets;
+window.filterTickets = filterTickets;
+window.resetTicketFilters = resetTicketFilters;
+window.openCreateTicketModal = openCreateTicketModal;
+window.closeCreateTicketModal = closeCreateTicketModal;
+window.handleCreateTicketSubmit = handleCreateTicketSubmit;
+window.openTicketDetail = openTicketDetail;
+window.closeTicketDetailModal = closeTicketDetailModal;
+window.updateTicketStatusFromModal = updateTicketStatusFromModal;
+window.assignTicketFromModal = assignTicketFromModal;
+window.handleTicketReplySubmit = handleTicketReplySubmit;
+window.togglePasswordVisibility = togglePasswordVisibility;
+window.openUserProfileModal = openUserProfileModal;
+window.closeUserProfileModal = closeUserProfileModal;
+
+// ============================================================================
+// CYBER WEB AUDIO SYNTHESIZER
+// ============================================================================
+let cyberAudioContext = null;
+let cyberAudioEnabled = localStorage.getItem("kunkurt_cyber_audio") !== "false";
+
+function getAudioContext() {
+  if (!cyberAudioContext) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      cyberAudioContext = new AudioCtx();
+    }
+  }
+  if (cyberAudioContext && cyberAudioContext.state === "suspended") {
+    cyberAudioContext.resume();
+  }
+  return cyberAudioContext;
+}
+
+function toggleCyberAudio() {
+  cyberAudioEnabled = !cyberAudioEnabled;
+  localStorage.setItem("kunkurt_cyber_audio", cyberAudioEnabled ? "true" : "false");
+  const icon = document.getElementById("audioIcon");
+  if (icon) {
+    icon.textContent = cyberAudioEnabled ? "🔊" : "🔇";
+  }
+  if (cyberAudioEnabled) {
+    playCyberSound("chime");
+    showNotification("🔊 Efectos de Sonido Cyber Activados");
+  } else {
+    showNotification("🔇 Efectos de Sonido Cyber Silenciados");
+  }
+}
+
+function playCyberSound(type = "click") {
+  if (!cyberAudioEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === "click") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === "chime" || type === "success") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.setValueAtTime(659.25, now + 0.08);
+      osc.frequency.setValueAtTime(783.99, now + 0.16);
+      osc.frequency.setValueAtTime(1046.50, now + 0.24);
+      gain.gain.setValueAtTime(0.09, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    } else if (type === "beep" || type === "info") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.12);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === "error") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.setValueAtTime(160, now + 0.1);
+      gain.gain.setValueAtTime(0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+  } catch (e) {}
+}
+
+// ============================================================================
+// COTIZADOR INTERACTIVO DE PROYECTOS
+// ============================================================================
+function calculateQuotation() {
+  const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
+  const baseCost = selectedTypeRadio ? parseFloat(selectedTypeRadio.dataset.baseCost || 1200) : 1200;
+  const baseWeeks = selectedTypeRadio ? parseInt(selectedTypeRadio.dataset.baseWeeks || 3) : 3;
+
+  let totalCost = baseCost;
+  let totalWeeks = baseWeeks;
+
+  const featureCheckboxes = document.querySelectorAll(".quote-feature-checkbox:checked");
+  featureCheckboxes.forEach(cb => {
+    totalCost += parseFloat(cb.dataset.cost || 0);
+    totalWeeks += parseInt(cb.dataset.weeks || 0);
+  });
+
+  const costDisplay = document.getElementById("quoteTotalCostDisplay");
+  const weeksDisplay = document.getElementById("quoteTotalWeeksDisplay");
+
+  if (costDisplay) {
+    costDisplay.textContent = `$${totalCost.toLocaleString("en-US")} USD`;
+  }
+  if (weeksDisplay) {
+    weeksDisplay.textContent = `${totalWeeks} semanas`;
+  }
+
+  return { totalCost, totalWeeks };
+}
+
+async function submitQuotationForm(e) {
+  e.preventDefault();
+  playCyberSound("click");
+
+  const nameInput = document.getElementById("quoteClientName");
+  const emailInput = document.getElementById("quoteClientEmail");
+  const companyInput = document.getElementById("quoteClientCompany");
+  const detailsInput = document.getElementById("quoteClientDetails");
+  const btnSubmit = document.getElementById("btnSubmitQuote");
+
+  const clientName = nameInput ? nameInput.value.trim() : "";
+  const clientEmail = emailInput ? emailInput.value.trim() : "";
+  const clientCompany = companyInput ? companyInput.value.trim() : "";
+  const details = detailsInput ? detailsInput.value.trim() : "";
+
+  if (!clientName || !clientEmail) {
+    showNotification("Por favor completa tu nombre y correo.", "error");
+    playCyberSound("error");
+    return;
+  }
+
+  const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
+  const projectTypeName = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white").textContent.trim() : "Full-Stack Web App";
+
+  const features = [];
+  document.querySelectorAll(".quote-feature-checkbox:checked").forEach(cb => {
+    const label = cb.parentElement.querySelector(".text-white");
+    if (label) features.push(label.textContent.trim());
+  });
+
+  const { totalCost, totalWeeks } = calculateQuotation();
+
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "⏳ Procesando cotización y abriendo ticket...";
+  }
+
+  try {
+    const res = await fetch("/api/quotations/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: clientName,
+        client_email: clientEmail,
+        client_company: clientCompany,
+        project_type: projectTypeName,
+        features: features,
+        budget_usd: totalCost,
+        timeline_weeks: totalWeeks,
+        description: details
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      playCyberSound("chime");
+      showNotification(`🎉 ¡Cotización enviada! Ticket #${data.ticket.ticket_code} registrado para revisión.`);
+      if (detailsInput) detailsInput.value = "";
+      loadTickets();
+      setTimeout(() => {
+        switchToSection("tickets");
+        openTicketDetail(data.ticket.id);
+      }, 800);
+    } else {
+      showNotification(data.error || "Error al procesar cotización", "error");
+      playCyberSound("error");
+    }
+  } catch (err) {
+    console.error("Error submitting quotation:", err);
+    showNotification("No se pudo conectar con el servidor", "error");
+    playCyberSound("error");
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = "🚀 Enviar Cotización y Abrir Ticket Oficial";
+    }
+  }
+}
+
+// ============================================================================
+// DASHBOARD DE MÉTRICAS & ANALYTICS
+// ============================================================================
+async function loadAnalyticsData() {
+  playCyberSound("beep");
+  try {
+    const res = await fetch("/api/analytics");
+    const data = await res.json();
+    if (!data.success) return;
+
+    const a = data.analytics;
+    const totals = a.totals || {};
+
+    const elProjects = document.getElementById("kpiProjectsCount");
+    const elTickets = document.getElementById("kpiTicketsCount");
+    const elRate = document.getElementById("kpiResolutionRate");
+    const elUsers = document.getElementById("kpiUsersCount");
+    const elMessages = document.getElementById("kpiMessagesCount");
+    const elArticles = document.getElementById("kpiArticlesCount");
+
+    if (elProjects) elProjects.textContent = totals.projects || 0;
+    if (elTickets) elTickets.textContent = totals.tickets || 0;
+    if (elUsers) elUsers.textContent = totals.users || 0;
+    if (elMessages) elMessages.textContent = totals.messages || 0;
+    if (elArticles) elArticles.textContent = totals.articles || 0;
+
+    const ticketsByStatus = a.tickets_by_status || {};
+    const totalT = totals.tickets || 1;
+    const resolvedT = (ticketsByStatus["resuelto"] || 0) + (ticketsByStatus["cerrado"] || 0);
+    const ratePercent = Math.round((resolvedT / totalT) * 100);
+    if (elRate) elRate.textContent = `${ratePercent}%`;
+
+    const techContainer = document.getElementById("analyticsTechStackBars");
+    if (techContainer && a.tech_stack) {
+      const maxCount = Math.max(...a.tech_stack.map(x => x[1]), 1);
+      techContainer.innerHTML = a.tech_stack.map(([tech, count]) => {
+        const pct = Math.round((count / maxCount) * 100);
+        return `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="font-bold text-white font-mono">${escapeHtml(tech)}</span>
+              <span class="text-cyan-300 font-mono">${count} repos</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-[#0e1424] overflow-hidden border border-white/10">
+              <div class="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 rounded-full transition-all duration-700" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    const ticketsChartContainer = document.getElementById("analyticsTicketsChart");
+    if (ticketsChartContainer) {
+      const ticketsByPriority = a.tickets_by_priority || {};
+      const statusLabels = [
+        { label: "Abiertos", count: ticketsByStatus["abierto"] || 0, color: "from-amber-400 to-amber-500" },
+        { label: "En Progreso", count: ticketsByStatus["en_progreso"] || 0, color: "from-cyan-400 to-blue-500" },
+        { label: "Resueltos / Cerrados", count: resolvedT, color: "from-emerald-400 to-teal-500" },
+        { label: "Prioridad Crítica", count: ticketsByPriority["critica"] || 0, color: "from-rose-500 to-red-600" }
+      ];
+
+      ticketsChartContainer.innerHTML = statusLabels.map(s => {
+        const pct = Math.min(100, Math.round((s.count / totalT) * 100));
+        return `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="font-bold text-white">${s.label}</span>
+              <span class="text-slate-300 font-mono">${s.count} tickets (${pct}%)</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-[#0e1424] overflow-hidden border border-white/10">
+              <div class="h-full bg-gradient-to-r ${s.color} rounded-full transition-all duration-700" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+  } catch (err) {
+    console.error("Error loading analytics:", err);
+  }
+}
+
+// ============================================================================
+// CHAT DEL EQUIPO & TABLÓN DE ANUNCIOS OFICIALES
+// ============================================================================
+async function loadTeamMessages() {
+  try {
+    const res = await fetch("/api/team/messages");
+    const data = await res.json();
+    if (!data.success) return;
+
+    const msgs = data.messages || [];
+    const container = document.getElementById("teamChatMessagesList");
+    const pinnedText = document.getElementById("chatPinnedText");
+
+    const pinnedMsg = msgs.find(m => m.is_pinned === 1 || m.message_type === "announcement");
+    if (pinnedText && pinnedMsg) {
+      pinnedText.textContent = pinnedMsg.message;
+    }
+
+    const pinOption = document.getElementById("chatPinOptionContainer");
+    if (pinOption) {
+      const user = getCurrentUser();
+      if (user && user.role === "admin") {
+        pinOption.classList.remove("hidden");
+        pinOption.classList.add("flex");
+      } else {
+        pinOption.classList.add("hidden");
+        pinOption.classList.remove("flex");
+      }
+    }
+
+    if (!container) return;
+    if (msgs.length === 0) {
+      container.innerHTML = `<div class="text-center text-xs text-purple-400/60 py-10">Sin mensajes registrados en el canal.</div>`;
+      return;
+    }
+
+    container.innerHTML = msgs.map(m => {
+      const isPinned = m.is_pinned === 1 || m.message_type === "announcement";
+      const bubbleClass = isPinned ? "chat-bubble-announcement" : "chat-bubble-user";
+      const roleColor = m.user_role === "admin" ? "bg-fuchsia-600" : (m.user_role === "developer" ? "bg-indigo-600" : "bg-purple-800");
+
+      return `
+        <div class="flex items-start gap-3">
+          <img src="${escapeHtml(m.user_avatar || 'https://ui-avatars.com/api/?name=User&background=8b5cf6&color=fff')}" class="w-8 h-8 rounded-xl object-cover border border-purple-500/40 flex-shrink-0">
+          <div class="p-3.5 rounded-2xl ${bubbleClass} flex-1 max-w-2xl space-y-1">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-white">${escapeHtml(m.user_name)}</span>
+                <span class="text-[9px] font-bold px-2 py-0.2 rounded-full text-white uppercase font-mono ${roleColor}">${escapeHtml(m.user_role)}</span>
+                ${isPinned ? '<span class="text-[9px] font-bold text-fuchsia-300 font-mono">📌 OFICIAL</span>' : ''}
+              </div>
+              <span class="text-[10px] text-purple-400 font-mono">${formatTimeAgo(m.created_at)}</span>
+            </div>
+            <p class="text-xs text-purple-100/90 leading-relaxed whitespace-pre-line">${escapeHtml(m.message)}</p>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    container.scrollTop = container.scrollHeight;
+  } catch (err) {
+    console.error("Error loading team messages:", err);
+  }
+}
+
+async function sendTeamChatMessage(e) {
+  e.preventDefault();
+  playCyberSound("click");
+  const input = document.getElementById("teamChatInput");
+  const pinCb = document.getElementById("chatPinCheckbox");
+  const btn = document.getElementById("btnSendChatMessage");
+
+  const message = input ? input.value.trim() : "";
+  if (!message) return;
+
+  const user = getCurrentUser() || PROFILES.admin;
+  const isPinned = pinCb && pinCb.checked && user.role === "admin" ? 1 : 0;
+  const messageType = isPinned ? "announcement" : "chat";
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/team/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_name: user.name || user.username || "Colaborador",
+        user_email: user.email || "dev@kunkurt.com",
+        user_role: user.role || "developer",
+        user_avatar: user.avatar,
+        message: message,
+        message_type: messageType,
+        is_pinned: isPinned
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      playCyberSound("beep");
+      if (input) input.value = "";
+      if (pinCb) pinCb.checked = false;
+      loadTeamMessages();
+    } else {
+      showNotification(data.error || "Error al enviar mensaje", "error");
+      playCyberSound("error");
+    }
+  } catch (err) {
+    console.error("Error sending message:", err);
+    playCyberSound("error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ============================================================================
+// BASE DE CONOCIMIENTO & WIKI TÉCNICA
+// ============================================================================
+let currentWikiFilterCategory = "all";
+let cachedWikiArticles = [];
+
+async function loadWikiArticles() {
+  try {
+    const res = await fetch("/api/wiki");
+    const data = await res.json();
+    if (!data.success) return;
+    cachedWikiArticles = data.articles || [];
+    renderWikiArticles(cachedWikiArticles);
+  } catch (err) {
+    console.error("Error loading wiki articles:", err);
+  }
+}
+
+function setWikiCategoryFilter(cat) {
+  playCyberSound("click");
+  currentWikiFilterCategory = cat;
+  document.querySelectorAll(".wiki-cat-btn").forEach(btn => {
+    if (btn.textContent.trim().toLowerCase() === cat.toLowerCase() || (cat === "all" && btn.textContent.trim().toLowerCase() === "todas")) {
+      btn.classList.add("active");
+    } else {
+      btn.classList.remove("active");
+    }
+  });
+  filterWikiArticles();
+}
+
+function filterWikiArticles() {
+  const searchInput = document.getElementById("wikiSearchInput");
+  const term = searchInput ? searchInput.value.toLowerCase().trim() : "";
+
+  let filtered = cachedWikiArticles;
+  if (currentWikiFilterCategory !== "all") {
+    filtered = filtered.filter(a => a.category === currentWikiFilterCategory);
+  }
+  if (term) {
+    filtered = filtered.filter(a => 
+      a.title.toLowerCase().includes(term) ||
+      a.content.toLowerCase().includes(term) ||
+      (a.tags && a.tags.some(t => t.toLowerCase().includes(term)))
+    );
+  }
+  renderWikiArticles(filtered);
+}
+
+function renderWikiArticles(articles) {
+  const grid = document.getElementById("wikiArticlesGrid");
+  if (!grid) return;
+
+  if (articles.length === 0) {
+    grid.innerHTML = `
+      <div class="col-span-full py-16 text-center glass-panel rounded-2xl border border-purple-500/20 p-8">
+        <span class="text-4xl block mb-2">📚</span>
+        <h4 class="text-sm font-bold text-white mb-1">Sin guías encontradas</h4>
+        <p class="text-xs text-purple-300/60">No se encontraron artículos con los criterios seleccionados.</p>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = articles.map(a => {
+    const tagsHtml = (a.tags || []).slice(0, 3).map(t => `
+      <span class="text-[9px] font-mono px-2 py-0.5 rounded-md bg-cyan-950/40 border border-cyan-500/20 text-cyan-300">${escapeHtml(t)}</span>
+    `).join("");
+
+    return `
+      <div class="glass-panel p-5 rounded-3xl border border-white/10 hover:border-cyan-500/40 transition-all flex flex-col justify-between space-y-4 hover:shadow-[0_0_35px_rgba(6,182,212,0.18)]">
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span class="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-slate-300">${escapeHtml(a.category)}</span>
+            <span class="text-cyan-400">👁️ ${a.views_count} lecturas</span>
+          </div>
+          <h4 class="text-base font-bold text-white leading-snug line-clamp-2">${escapeHtml(a.title)}</h4>
+          <p class="text-xs text-slate-300/80 line-clamp-3 leading-relaxed">${escapeHtml(a.content.replace(/[#*`_]/g, ''))}</p>
+        </div>
+
+        <div class="space-y-3 pt-2 border-t border-white/10">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${tagsHtml}
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[10px] text-slate-400 font-mono">Por ${escapeHtml(a.author_name)}</span>
+            <button onclick="openWikiArticleModal(${a.id})" class="btn-ghost-neon text-xs py-1 px-3 border-cyan-500/40 text-cyan-300 hover:text-white">
+              Leer Guía →
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function openWikiArticleModal(id) {
+  playCyberSound("click");
+  try {
+    const res = await fetch(`/api/wiki/${id}`);
+    const data = await res.json();
+    if (!data.success) return;
+    const a = data.article;
+
+    const elTitle = document.getElementById("wikiModalTitle");
+    const elCat = document.getElementById("wikiModalCategory");
+    const elAuthor = document.getElementById("wikiModalAuthor");
+    const elDate = document.getElementById("wikiModalDate");
+    const elViews = document.getElementById("wikiModalViews");
+    const elContent = document.getElementById("wikiModalContent");
+    const elTags = document.getElementById("wikiModalTags");
+
+    if (elTitle) elTitle.textContent = a.title;
+    if (elCat) elCat.textContent = a.category;
+    if (elAuthor) elAuthor.textContent = a.author_name;
+    if (elDate) elDate.textContent = formatTimeAgo(a.created_at);
+    if (elViews) elViews.textContent = `${a.views_count} lecturas`;
+    if (elContent) elContent.textContent = a.content;
+
+    if (elTags) {
+      elTags.innerHTML = (a.tags || []).map(t => `
+        <span class="text-xs font-mono px-2.5 py-1 rounded-lg bg-purple-950/60 border border-purple-500/40 text-purple-200">${escapeHtml(t)}</span>
+      `).join("");
+    }
+
+    const modal = document.getElementById("wikiArticleModal");
+    if (modal) modal.classList.remove("hidden");
+  } catch (err) {
+    console.error("Error opening wiki article:", err);
+  }
+}
+
+function closeWikiArticleModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("wikiArticleModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function openCreateWikiModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("createWikiArticleModal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeCreateWikiModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("createWikiArticleModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function handleCreateWikiArticle(e) {
+  e.preventDefault();
+  playCyberSound("click");
+  const titleInput = document.getElementById("newWikiTitle");
+  const catInput = document.getElementById("newWikiCategory");
+  const tagsInput = document.getElementById("newWikiTags");
+  const contentInput = document.getElementById("newWikiContent");
+
+  const title = titleInput ? titleInput.value.trim() : "";
+  const category = catInput ? catInput.value.trim() : "General";
+  const tagsRaw = tagsInput ? tagsInput.value.trim() : "";
+  const content = contentInput ? contentInput.value.trim() : "";
+
+  if (!title || !content) {
+    showNotification("Título y contenido son obligatorios.", "error");
+    playCyberSound("error");
+    return;
+  }
+
+  const tags = tagsRaw.split(",").map(t => t.trim()).filter(Boolean);
+  const user = getCurrentUser() || PROFILES.admin;
+
+  try {
+    const res = await fetch("/api/wiki", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        category,
+        content,
+        tags,
+        author_name: user.name || user.username || "Developer",
+        author_role: user.role || "developer"
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      playCyberSound("chime");
+      showNotification("📖 ¡Guía técnica publicada en la Wiki!");
+      closeCreateWikiModal();
+      if (titleInput) titleInput.value = "";
+      if (tagsInput) tagsInput.value = "";
+      if (contentInput) contentInput.value = "";
+      loadWikiArticles();
+    } else {
+      showNotification(data.error || "Error al publicar guía", "error");
+      playCyberSound("error");
+    }
+  } catch (err) {
+    console.error("Error creating wiki article:", err);
+    playCyberSound("error");
+  }
+}
+
+// ============================================================================
+// CONFIGURACIÓN DE WEBHOOKS CYBER
+// ============================================================================
+async function openWebhookSettingsModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("webhookSettingsModal");
+  if (modal) modal.classList.remove("hidden");
+
+  try {
+    const res = await fetch("/api/settings/webhooks");
+    const data = await res.json();
+    if (data.success && data.settings) {
+      const s = data.settings;
+      const elDiscord = document.getElementById("webhookDiscordUrl");
+      const elTgToken = document.getElementById("webhookTelegramToken");
+      const elTgChat = document.getElementById("webhookTelegramChatId");
+      const elEnabled = document.getElementById("webhookEnabledCheckbox");
+      const elNotifTicket = document.getElementById("webhookNotifyTicket");
+      const elNotifLogin = document.getElementById("webhookNotifyLogin");
+      const elNotifQuote = document.getElementById("webhookNotifyQuote");
+
+      if (elDiscord) elDiscord.value = s.discord_url || "";
+      if (elTgToken) elTgToken.value = s.telegram_token || "";
+      if (elTgChat) elTgChat.value = s.telegram_chat_id || "";
+      if (elEnabled) elEnabled.checked = !!s.enabled;
+      if (elNotifTicket) elNotifTicket.checked = s.notify_on_ticket !== false;
+      if (elNotifLogin) elNotifLogin.checked = s.notify_on_login !== false;
+      if (elNotifQuote) elNotifQuote.checked = s.notify_on_quote !== false;
+    }
+  } catch (err) {
+    console.error("Error loading webhook settings:", err);
+  }
+}
+
+function closeWebhookSettingsModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("webhookSettingsModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function handleSaveWebhookSettings(e) {
+  e.preventDefault();
+  playCyberSound("click");
+
+  const discordUrl = document.getElementById("webhookDiscordUrl")?.value.trim() || "";
+  const telegramToken = document.getElementById("webhookTelegramToken")?.value.trim() || "";
+  const telegramChatId = document.getElementById("webhookTelegramChatId")?.value.trim() || "";
+  const enabled = document.getElementById("webhookEnabledCheckbox")?.checked || false;
+  const notifyTicket = document.getElementById("webhookNotifyTicket")?.checked !== false;
+  const notifyLogin = document.getElementById("webhookNotifyLogin")?.checked !== false;
+  const notifyQuote = document.getElementById("webhookNotifyQuote")?.checked !== false;
+
+  try {
+    const res = await fetch("/api/settings/webhooks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        discord_url: discordUrl,
+        telegram_token: telegramToken,
+        telegram_chat_id: telegramChatId,
+        enabled: enabled,
+        notify_on_ticket: notifyTicket,
+        notify_on_login: notifyLogin,
+        notify_on_quote: notifyQuote
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      playCyberSound("chime");
+      showNotification("🔔 Configuración de Webhooks guardada exitosamente.");
+      closeWebhookSettingsModal();
+    } else {
+      showNotification(data.error || "Error al guardar webhooks", "error");
+      playCyberSound("error");
+    }
+  } catch (err) {
+    console.error("Error saving webhook settings:", err);
+    showNotification("Error de conexión al guardar webhooks", "error");
+    playCyberSound("error");
+  }
+}
+
+async function testWebhookConnection() {
+  playCyberSound("click");
+  showNotification("🧪 Enviando test a webhooks activos...");
+  try {
+    const res = await fetch("/api/webhooks/test", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      playCyberSound("chime");
+      showNotification("✅ Test despachado a Discord / Telegram.");
+    }
+  } catch (err) {
+    console.error("Error testing webhook:", err);
+  }
+}
+
+// ============================================================================
+// EXPORTADOR DE DOSSIER EJECUTIVO EN PDF
+// ============================================================================
+async function exportExecutiveDossier() {
+  playCyberSound("chime");
+  showNotification("📄 Generando Dossier Ejecutivo en PDF...");
+
+  try {
+    const dDate = document.getElementById("dossierPrintDate");
+    if (dDate) dDate.textContent = new Date().toISOString().split("T")[0];
+
+    const res = await fetch("/api/analytics");
+    const data = await res.json();
+    if (data.success && data.analytics) {
+      const totals = data.analytics.totals || {};
+      const elP = document.getElementById("dossierTotalProjects");
+      const elT = document.getElementById("dossierTotalTickets");
+      const elR = document.getElementById("dossierResolutionRate");
+      const elL = document.getElementById("dossierTotalLikes");
+
+      if (elP) elP.textContent = totals.projects || 0;
+      if (elT) elT.textContent = totals.tickets || 0;
+      if (elL) elL.textContent = (totals.likes || 0).toLocaleString();
+
+      const totalT = totals.tickets || 1;
+      const statusMap = data.analytics.tickets_by_status || {};
+      const resT = (statusMap["resuelto"] || 0) + (statusMap["cerrado"] || 0);
+      if (elR) elR.textContent = `${Math.round((resT / totalT) * 100)}%`;
+    }
+
+    const pContainer = document.getElementById("dossierProjectsTableContainer");
+    if (pContainer && allProjects) {
+      const topProjects = allProjects.slice(0, 6);
+      pContainer.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead>
+            <tr style="background: #f3f4f6; text-align: left; border-bottom: 2px solid #e5e7eb;">
+              <th style="padding: 8px;">Proyecto</th>
+              <th style="padding: 8px;">Categoría</th>
+              <th style="padding: 8px;">Stack Tecnológico</th>
+              <th style="padding: 8px;">Estado</th>
+              <th style="padding: 8px;">Interacciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${topProjects.map(p => `
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 8px; font-weight: bold; color: #111827;">${escapeHtml(p.title)}</td>
+                <td style="padding: 8px; color: #6b7280;">${escapeHtml(p.category)}</td>
+                <td style="padding: 8px; font-family: monospace; font-size: 10px; color: #4c1d95;">${escapeHtml(Array.isArray(p.tech_stack) ? p.tech_stack.slice(0, 3).join(", ") : p.tech_stack)}</td>
+                <td style="padding: 8px;"><span style="padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; background: #ecfdf5; color: #047857;">${escapeHtml(p.status)}</span></td>
+                <td style="padding: 8px; color: #6b7280;">⭐ ${p.likes_count || 0}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    setTimeout(() => {
+      window.print();
+    }, 400);
+
+  } catch (err) {
+    console.error("Error generating dossier:", err);
+    window.print();
+  }
+}
+
+// ============================================================================
+// DEVICE VIEW SWITCHER (DESKTOP / MOBILE / FULLSCREEN PREVIEW)
+// ============================================================================
+function setDeviceView(mode) {
+  playCyberSound("click");
+  const container = document.getElementById("browserFrameContainer");
+  const btnDesktop = document.getElementById("deviceBtnDesktop");
+  const btnMobile = document.getElementById("deviceBtnMobile");
+  const btnFull = document.getElementById("deviceBtnFull");
+
+  const inactiveBtn = "p-2 px-3.5 rounded-xl text-slate-400 hover:text-white font-medium text-xs flex items-center gap-2 transition-all hover:bg-white/10";
+  const activeBtn = "p-2 px-3.5 rounded-xl bg-white/10 text-white font-medium text-xs flex items-center gap-2 transition-all hover:bg-white/20 shadow-sm";
+
+  if (btnDesktop) {
+    btnDesktop.className = inactiveBtn;
+    const svg = btnDesktop.querySelector("svg");
+    if (svg) svg.className = "w-4 h-4 text-slate-400";
+  }
+  if (btnMobile) {
+    btnMobile.className = inactiveBtn;
+    const svg = btnMobile.querySelector("svg");
+    if (svg) svg.className = "w-4 h-4 text-slate-400";
+  }
+  if (btnFull) {
+    btnFull.className = inactiveBtn;
+    const svg = btnFull.querySelector("svg");
+    if (svg) svg.className = "w-4 h-4 text-slate-400";
+  }
+
+  if (!container) return;
+
+  if (mode === "mobile") {
+    container.className = "max-w-md mx-auto px-4 pb-8 transition-all duration-500 ease-out";
+    if (btnMobile) {
+      btnMobile.className = activeBtn;
+      const svg = btnMobile.querySelector("svg");
+      if (svg) svg.className = "w-4 h-4 text-cyan-400";
+    }
+    showToast("📱 Vista Móvil activada", "info");
+  } else if (mode === "full") {
+    container.className = "w-full max-w-none px-2 sm:px-6 pb-8 transition-all duration-500 ease-out";
+    if (btnFull) {
+      btnFull.className = activeBtn;
+      const svg = btnFull.querySelector("svg");
+      if (svg) svg.className = "w-4 h-4 text-cyan-400";
+    }
+    showToast("🖼️ Vista Expandida activada", "info");
+  } else {
+    container.className = "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 transition-all duration-500 ease-out";
+    if (btnDesktop) {
+      btnDesktop.className = activeBtn;
+      const svg = btnDesktop.querySelector("svg");
+      if (svg) svg.className = "w-4 h-4 text-cyan-400";
+    }
+    showToast("🖥️ Vista Escritorio activada", "info");
+  }
+}
+
+// Window exports
+window.openToolsModal = openToolsModal;
+window.closeToolsModal = closeToolsModal;
+window.setDeviceView = setDeviceView;
+window.toggleCyberAudio = toggleCyberAudio;
+window.playCyberSound = playCyberSound;
+window.calculateQuotation = calculateQuotation;
+window.submitQuotationForm = submitQuotationForm;
+window.loadAnalyticsData = loadAnalyticsData;
+window.loadTeamMessages = loadTeamMessages;
+window.sendTeamChatMessage = sendTeamChatMessage;
+window.loadWikiArticles = loadWikiArticles;
+window.setWikiCategoryFilter = setWikiCategoryFilter;
+window.filterWikiArticles = filterWikiArticles;
+window.openWikiArticleModal = openWikiArticleModal;
+window.closeWikiArticleModal = closeWikiArticleModal;
+window.openCreateWikiModal = openCreateWikiModal;
+window.closeCreateWikiModal = closeCreateWikiModal;
+window.handleCreateWikiArticle = handleCreateWikiArticle;
+window.openWebhookSettingsModal = openWebhookSettingsModal;
+window.closeWebhookSettingsModal = closeWebhookSettingsModal;
+window.handleSaveWebhookSettings = handleSaveWebhookSettings;
+window.testWebhookConnection = testWebhookConnection;
+window.exportExecutiveDossier = exportExecutiveDossier;
+
+// ============================================================================
+// TOOLS & SETTINGS MODAL CONTROLLER
+// ============================================================================
+function openToolsModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("toolsModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeToolsModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("toolsModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  document.body.style.overflow = "auto";
+}
+
+
 

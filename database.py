@@ -5,12 +5,16 @@ Kunkurt Devs - Database Module with GitHub Sync, Authentication Logs & Public Sh
 import sqlite3
 import json
 import os
+import urllib.parse
 from datetime import datetime
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "kunkurt.db")
+from config import DB_PATH, ADMIN_EMAIL, ADMIN_NAME, DEFAULT_GITHUB_USER
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(DB_PATH), timeout=20.0)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except Exception:
+        pass
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -140,6 +144,105 @@ def init_db(force_seed=False):
     );
     """)
 
+    # App Settings & SMTP table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
+    );
+    """)
+
+    # Tickets table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_code TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        category TEXT DEFAULT 'Soporte',
+        priority TEXT DEFAULT 'media',
+        status TEXT DEFAULT 'abierto',
+        project_id INTEGER,
+        project_title TEXT DEFAULT 'General',
+        author_name TEXT NOT NULL,
+        author_email TEXT NOT NULL,
+        author_role TEXT DEFAULT 'cliente',
+        assigned_id INTEGER,
+        assigned_name TEXT DEFAULT 'Sin Asignar',
+        assigned_email TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # Ticket comments / responses thread
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ticket_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ticket_id INTEGER NOT NULL,
+        user_name TEXT NOT NULL,
+        user_email TEXT NOT NULL,
+        user_role TEXT DEFAULT 'colaborador',
+        user_avatar TEXT,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE
+    );
+    """)
+
+    # Team Live Chat & Announcements table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS team_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_name TEXT NOT NULL,
+        user_email TEXT NOT NULL,
+        user_role TEXT DEFAULT 'developer',
+        user_avatar TEXT,
+        message TEXT NOT NULL,
+        message_type TEXT DEFAULT 'chat',
+        is_pinned INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # Knowledge Base / Technical Wiki table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS knowledge_base (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        category TEXT DEFAULT 'Despliegue & DevOps',
+        content TEXT NOT NULL,
+        author_name TEXT NOT NULL,
+        author_role TEXT DEFAULT 'admin',
+        tags TEXT DEFAULT '[]',
+        views_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    # Ensure password column exists in users
+    cursor.execute("PRAGMA table_info(users)")
+    cols = [r["name"] for r in cursor.fetchall()]
+    if "password" not in cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN password TEXT DEFAULT ''")
+
+    # Seed sample tickets if table is empty
+    cursor.execute("SELECT COUNT(*) FROM tickets")
+    if cursor.fetchone()[0] == 0:
+        seed_sample_tickets(conn)
+
+    # Seed sample announcements and chat messages if empty
+    cursor.execute("SELECT COUNT(*) FROM team_messages")
+    if cursor.fetchone()[0] == 0:
+        seed_sample_team_messages(conn)
+
+    # Seed knowledge base if empty
+    cursor.execute("SELECT COUNT(*) FROM knowledge_base")
+    if cursor.fetchone()[0] == 0:
+        seed_sample_knowledge_base(conn)
+
     conn.commit()
 
     if force_seed:
@@ -162,13 +265,14 @@ def reset_and_seed_japonplx_data(conn):
     cursor.execute("DELETE FROM users")
 
     # Seed Users (SOLO EL ADMINISTRADOR REAL FUNDADOR - Cero personas falsas)
+    admin_uname = DEFAULT_GITHUB_USER.lower()
     users = [
         (
-            "japonplx",
-            "JaponPLX (Alejandro)",
-            "alejandrobelno964@gmail.com",
+            admin_uname,
+            ADMIN_NAME,
+            ADMIN_EMAIL,
             "admin",
-            "https://avatars.githubusercontent.com/u/171938813?v=4",
+            f"https://avatars.githubusercontent.com/{DEFAULT_GITHUB_USER}",
             "Dirección General & Arquitectura de Software",
             json.dumps(["👑 Administrador Fundador", "⚡ Lead Developer", "GitHub Master"]),
             1000
@@ -619,6 +723,17 @@ def get_notifications():
     conn.close()
     return notifs
 
+def add_notification(title, message, n_type="team"):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO notifications (title, message, type, time_ago, is_read)
+        VALUES (?, ?, ?, 'Hace un momento', 0)
+    """, (title, message, n_type))
+    conn.commit()
+    conn.close()
+    return True
+
 def mark_notifications_read():
     conn = get_connection()
     cursor = conn.cursor()
@@ -717,12 +832,17 @@ def save_or_update_user(username, full_name, email, role, avatar_url=None, depar
     conn.close()
     return row
 
-def find_user_by_email(email):
-    if not email:
+def find_user_by_credentials(identifier):
+    if not identifier:
         return None
+    ident = identifier.strip().lower()
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username, full_name, email, role, avatar_url, department, badges, points FROM users WHERE LOWER(email) = LOWER(?)", (email.strip(),))
+    cursor.execute("""
+        SELECT id, username, full_name, email, role, avatar_url, department, badges, points, password 
+        FROM users 
+        WHERE LOWER(email) = ? OR LOWER(username) = ?
+    """, (ident, ident))
     row = cursor.fetchone()
     conn.close()
     if row:
@@ -730,6 +850,9 @@ def find_user_by_email(email):
         u["badges"] = json.loads(u["badges"]) if u.get("badges") else []
         return u
     return None
+
+def find_user_by_email(email):
+    return find_user_by_credentials(email)
 
 def admin_create_employee(full_name, email, role, department):
     import urllib.parse
@@ -774,12 +897,698 @@ def admin_delete_employee(user_id):
     cursor = conn.cursor()
     cursor.execute("SELECT email FROM users WHERE id = ?", (user_id,))
     u = cursor.fetchone()
-    if u and "japon" in u["email"].lower():
+    if u and (u["email"].lower() == ADMIN_EMAIL.lower() or "japon" in u["email"].lower()):
         conn.close()
         return False
     cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
     return True
+
+def register_user(full_name, email, password="", department="Equipo Kunkurt Devs", username=None):
+    import urllib.parse
+    email = email.strip().lower()
+    full_name = full_name.strip()
+    if not username or not username.strip():
+        username = email.split("@")[0].lower()
+    else:
+        username = username.strip().lower().replace(" ", "")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?", (email, username))
+    existing = cursor.fetchone()
+    if existing:
+        conn.close()
+        return None, "Ya existe un usuario registrado con este correo o nombre de usuario."
+
+    role = "admin" if email == ADMIN_EMAIL.lower() else "employee"
+    badge_label = "👑 Administrador Fundador" if role == "admin" else "🌟 Nuevo Integrante"
+
+    cursor.execute("""
+        INSERT INTO users (username, full_name, email, role, avatar_url, department, badges, points, password)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        username,
+        full_name,
+        email,
+        role,
+        f"https://ui-avatars.com/api/?name={urllib.parse.quote(full_name)}&background=8b5cf6&color=fff",
+        department or "Equipo Kunkurt Devs",
+        json.dumps([badge_label, f"Rol: {role.title()}"]),
+        150,
+        password or ""
+    ))
+    user_id = cursor.lastrowid
+    conn.commit()
+    cursor.execute("SELECT id, username, full_name, email, role, avatar_url, department, badges, points FROM users WHERE id = ?", (user_id,))
+    u = dict(cursor.fetchone())
+    u["badges"] = json.loads(u["badges"]) if u.get("badges") else []
+    conn.close()
+    return u, None
+
+def update_user_password(user_id, new_password):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user_id))
+    conn.commit()
+    conn.close()
+    return True
+
+def update_user_role(user_id, new_role):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT email FROM users WHERE id = ?", (user_id,))
+    u = cursor.fetchone()
+    if not u:
+        conn.close()
+        return False, "Usuario no encontrado."
+    if u["email"].lower() == ADMIN_EMAIL.lower() and new_role != "admin":
+        conn.close()
+        return False, "No se puede degradar el rol del Administrador Fundador."
+
+    cursor.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, user_id))
+    conn.commit()
+    conn.close()
+    return True, None
+
+def save_smtp_settings(settings_dict):
+    conn = get_connection()
+    cursor = conn.cursor()
+    for k, v in settings_dict.items():
+        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (k, str(v)))
+    conn.commit()
+    conn.close()
+    return True
+
+def get_smtp_settings():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM settings")
+    rows = cursor.fetchall()
+    res = {r["key"]: r["value"] for r in rows}
+    conn.close()
+    return res
+
+# ============================================================================
+# TICKETS & SUPPORT DESK MODULE
+# ============================================================================
+
+def seed_sample_tickets(conn):
+    cursor = conn.cursor()
+    sample_tickets = [
+        (
+            "TCK-1001",
+            "Ticket de Prueba: Verificación del Sistema de Soporte & HelpDesk",
+            "Ticket de prueba para verificar la creación, seguimiento, comentarios en tiempo real y asignación de incidencias en Kunkurt Devs.",
+            "Soporte Técnico",
+            "media",
+            "abierto",
+            None,
+            "Plataforma Kunkurt Devs",
+            "Equipo Kunkurt",
+            "soporte@kunkurt.dev",
+            "support",
+            None,
+            "Sin Asignar",
+            None
+        )
+    ]
+
+    for t in sample_tickets:
+        cursor.execute("""
+            INSERT INTO tickets (
+                ticket_code, title, description, category, priority, status,
+                project_id, project_title, author_name, author_email, author_role,
+                assigned_id, assigned_name, assigned_email
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, t)
+        ticket_id = cursor.lastrowid
+        cursor.execute("""
+            INSERT INTO ticket_comments (ticket_id, user_name, user_email, user_role, user_avatar, content)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            ticket_id,
+            "Kunkurt System",
+            "system@kunkurt.com",
+            "admin",
+            "https://ui-avatars.com/api/?name=Kunkurt+Bot&background=8b5cf6&color=fff",
+            "Ticket registrado en la mesa de ayuda. Nuestro equipo técnico revisará el caso a la brevedad."
+        ))
+
+    conn.commit()
+
+def create_ticket(title, description, category, priority, project_id, project_title, author_name, author_email, author_role="cliente", assigned_id=None, assigned_name="Sin Asignar", assigned_email=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT MAX(id) FROM tickets")
+    max_id = cursor.fetchone()[0] or 1000
+    ticket_code = f"TCK-{max_id + 1}"
+
+    # If assigned_id is provided, resolve name and email
+    if assigned_id:
+        cursor.execute("SELECT full_name, email FROM users WHERE id = ?", (assigned_id,))
+        usr = cursor.fetchone()
+        if usr:
+            assigned_name = usr["full_name"]
+            assigned_email = usr["email"]
+
+    cursor.execute("""
+        INSERT INTO tickets (
+            ticket_code, title, description, category, priority, status,
+            project_id, project_title, author_name, author_email, author_role,
+            assigned_id, assigned_name, assigned_email, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'abierto', ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (
+        ticket_code, title, description, category or "Soporte", priority or "media",
+        project_id, project_title or "General", author_name, author_email, author_role or "cliente",
+        assigned_id, assigned_name, assigned_email
+    ))
+    ticket_id = cursor.lastrowid
+
+    # Add initial auto-reply comment
+    cursor.execute("""
+        INSERT INTO ticket_comments (ticket_id, user_name, user_email, user_role, user_avatar, content)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        ticket_id,
+        "Kunkurt HelpDesk",
+        "soporte@kunkurt.com",
+        "admin",
+        "https://ui-avatars.com/api/?name=Kunkurt+HelpDesk&background=8b5cf6&color=fff",
+        f"Ticket #{ticket_code} recibido correctamente con prioridad [{priority.upper()}]. Notificación enviada al equipo de desarrollo."
+    ))
+
+    # Add system notification
+    cursor.execute("""
+        INSERT INTO notifications (title, message, type, time_ago, is_read)
+        VALUES (?, ?, 'info', 'Hace un momento', 0)
+    """, (f"🎫 Nuevo Ticket Abierto #{ticket_code}", f"{author_name} abrió un ticket: '{title}' ({category})"))
+
+    conn.commit()
+    conn.close()
+    return get_ticket(ticket_id)
+
+def get_tickets(status=None, priority=None, category=None, search=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT t.*, 
+               (SELECT COUNT(*) FROM ticket_comments c WHERE c.ticket_id = t.id) as comments_count
+        FROM tickets t
+        WHERE 1=1
+    """
+    params = []
+
+    if status and status != "all":
+        query += " AND t.status = ?"
+        params.append(status.lower())
+
+    if priority and priority != "all":
+        query += " AND t.priority = ?"
+        params.append(priority.lower())
+
+    if category and category != "all":
+        query += " AND t.category = ?"
+        params.append(category)
+
+    if search:
+        s = f"%{search.lower()}%"
+        query += " AND (LOWER(t.title) LIKE ? OR LOWER(t.description) LIKE ? OR LOWER(t.ticket_code) LIKE ? OR LOWER(t.author_name) LIKE ? OR LOWER(t.assigned_name) LIKE ?)"
+        params.extend([s, s, s, s, s])
+
+    query += " ORDER BY CASE t.priority WHEN 'critica' THEN 1 WHEN 'alta' THEN 2 WHEN 'media' THEN 3 ELSE 4 END, t.created_at DESC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    tickets = [dict(r) for r in rows]
+    conn.close()
+    return tickets
+
+def get_ticket(ticket_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tickets WHERE id = ? OR ticket_code = ?", (ticket_id, str(ticket_id)))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    ticket = dict(row)
+    cursor.execute("SELECT * FROM ticket_comments WHERE ticket_id = ? ORDER BY created_at ASC", (ticket["id"],))
+    comments = [dict(c) for c in cursor.fetchall()]
+    ticket["comments"] = comments
+    conn.close()
+    return ticket
+
+def update_ticket_status(ticket_id, new_status, updated_by_name=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tickets WHERE id = ?", (ticket_id,))
+    t = cursor.fetchone()
+    if not t:
+        conn.close()
+        return None
+
+    cursor.execute("""
+        UPDATE tickets 
+        SET status = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+    """, (new_status.lower(), ticket_id))
+
+    by_str = f" por {updated_by_name}" if updated_by_name else ""
+    cursor.execute("""
+        INSERT INTO ticket_comments (ticket_id, user_name, user_email, user_role, user_avatar, content)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        ticket_id,
+        updated_by_name or "Kunkurt Bot",
+        "soporte@kunkurt.com",
+        "system",
+        "https://ui-avatars.com/api/?name=Kunkurt&background=8b5cf6&color=fff",
+        f"Estado del ticket actualizado a [{new_status.upper()}]{by_str}."
+    ))
+
+    cursor.execute("""
+        INSERT INTO notifications (title, message, type, time_ago, is_read)
+        VALUES (?, ?, 'info', 'Hace un momento', 0)
+    """, (f"Ticket #{t['ticket_code']} Actualizado", f"El estado cambió a [{new_status.upper()}]{by_str}."))
+
+    conn.commit()
+    conn.close()
+    return get_ticket(ticket_id)
+
+def assign_ticket(ticket_id, user_id, assigned_by_name=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    u = cursor.fetchone()
+    if not u:
+        conn.close()
+        return None
+
+    cursor.execute("""
+        UPDATE tickets
+        SET assigned_id = ?, assigned_name = ?, assigned_email = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (u["id"], u["full_name"], u["email"], ticket_id))
+
+    cursor.execute("""
+        INSERT INTO ticket_comments (ticket_id, user_name, user_email, user_role, user_avatar, content)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        ticket_id,
+        assigned_by_name or "Kunkurt Lead",
+        "soporte@kunkurt.com",
+        "admin",
+        "https://ui-avatars.com/api/?name=Kunkurt&background=8b5cf6&color=fff",
+        f"Ticket asignado a {u['full_name']} [{u['role'].upper()}]."
+    ))
+
+    cursor.execute("""
+        INSERT INTO notifications (title, message, type, time_ago, is_read)
+        VALUES (?, ?, 'info', 'Hace un momento', 0)
+    """, (f"Ticket #{ticket_id} Asignado", f"Asignado a {u['full_name']} [{u['role'].upper()}]."))
+
+    conn.commit()
+    conn.close()
+    return get_ticket(ticket_id)
+
+def add_ticket_comment(ticket_id, user_name, user_email, user_role, content, user_avatar=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    avatar = user_avatar or f"https://ui-avatars.com/api/?name={urllib.parse.quote(user_name)}&background=8b5cf6&color=fff"
+    cursor.execute("""
+        INSERT INTO ticket_comments (ticket_id, user_name, user_email, user_role, user_avatar, content)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (ticket_id, user_name, user_email, user_role, avatar, content))
+    comment_id = cursor.lastrowid
+
+    cursor.execute("UPDATE tickets SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (ticket_id,))
+    conn.commit()
+
+    cursor.execute("SELECT * FROM ticket_comments WHERE id = ?", (comment_id,))
+    c = dict(cursor.fetchone())
+    conn.close()
+    return c
+
+def get_ticket_stats():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM tickets")
+    total = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status = 'abierto'")
+    abiertos = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status = 'en_progreso'")
+    en_progreso = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status IN ('resuelto', 'cerrado')")
+    resueltos = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM tickets WHERE priority = 'critica' AND status != 'cerrado'")
+    criticos = cursor.fetchone()[0]
+
+    conn.close()
+    return {
+        "total": total,
+        "abiertos": abiertos,
+        "en_progreso": en_progreso,
+        "resueltos": resueltos,
+        "criticos": criticos
+    }
+
+# ============================================================================
+# TEAM CHAT & ANNOUNCEMENTS MODULE
+# ============================================================================
+
+def seed_sample_team_messages(conn):
+    cursor = conn.cursor()
+    sample_msgs = [
+        (
+            "Alejandro (JaponPLX)",
+            ADMIN_EMAIL,
+            "admin",
+            "https://ui-avatars.com/api/?name=Alejandro+JaponPLX&background=8b5cf6&color=fff",
+            "📢 [ANUNCIO OFICIAL] ¡Bienvenidos al panel de operaciones Kunkurt Devs! Todas las actualizaciones de infraestructura, tickets de soporte y cotizaciones ahora se sincronizan en tiempo real.",
+            "announcement",
+            1
+        ),
+        (
+            "Alejandro (JaponPLX)",
+            ADMIN_EMAIL,
+            "admin",
+            "https://ui-avatars.com/api/?name=Alejandro+JaponPLX&background=8b5cf6&color=fff",
+            "🚀 Hemos activado el cotizador inteligente para nuevos clientes y el canal de webhooks para notificaciones automáticas.",
+            "chat",
+            0
+        )
+    ]
+    for m in sample_msgs:
+        cursor.execute("""
+            INSERT INTO team_messages (user_name, user_email, user_role, user_avatar, message, message_type, is_pinned)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, m)
+    conn.commit()
+
+def get_team_messages(limit=60):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM team_messages
+        ORDER BY is_pinned DESC, id ASC
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    msgs = [dict(r) for r in rows]
+    conn.close()
+    return msgs
+
+def add_team_message(user_name, user_email, user_role, message, message_type="chat", is_pinned=0, user_avatar=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    avatar = user_avatar or f"https://ui-avatars.com/api/?name={urllib.parse.quote(user_name)}&background=8b5cf6&color=fff"
+    cursor.execute("""
+        INSERT INTO team_messages (user_name, user_email, user_role, user_avatar, message, message_type, is_pinned)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (user_name, user_email, user_role, avatar, message, message_type, 1 if is_pinned else 0))
+    msg_id = cursor.lastrowid
+    conn.commit()
+
+    cursor.execute("SELECT * FROM team_messages WHERE id = ?", (msg_id,))
+    msg = dict(cursor.fetchone())
+    conn.close()
+    return msg
+
+def delete_team_message(message_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM team_messages WHERE id = ?", (message_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+# ============================================================================
+# KNOWLEDGE BASE / TECHNICAL WIKI MODULE
+# ============================================================================
+
+def seed_sample_knowledge_base(conn):
+    cursor = conn.cursor()
+    sample_articles = [
+        (
+            "Arquitectura Kunkurt Microservices & RAG",
+            "arquitectura-kunkurt-microservices",
+            "Arquitectura & Backend",
+            "## Visión General de la Arquitectura\n\nEl ecosistema Kunkurt Devs está diseñado bajo una arquitectura modular y reactiva:\n\n1. **Core Backend**: Servidor HTTP en Python puro sin dependencias externas para garantizar 100% portabilidad.\n2. **Persistencia**: SQLite en modo WAL (Write-Ahead Logging) optimizado para transacciones concurrentes de baja latencia.\n3. **Front-End Cyber UI**: HTML5/CSS3/Vanilla JS con diseño Cyber-Violet (`#07040d`, `#8b5cf6`), widgets SVG nativos y Web Audio API.\n4. **Seguridad**: Control de accesos RBAC (Admin, Developer, QA, Lead, Cliente) con hashing SHA-256 y auditoría en login_logs.\n5. **Mesa de Ayuda & HelpDesk**: Sistema integral de tickets enlazado al cotizador interactivo.",
+            "Alejandro (JaponPLX)",
+            "admin",
+            json.dumps(["Arquitectura", "Backend", "Python", "SQLite", "RAG"]),
+            14
+        ),
+        (
+            "Manual de Despliegue CI/CD y Túneles Públicos Seguros",
+            "manual-despliegue-cicd",
+            "DevOps & Cloud",
+            "## Guía de Despliegue y Exposición Segura\n\n### 1. Variables de Entorno y Portabilidad\nTodas las rutas deben resolver a través de `config.py` utilizando `Path(__file__).parent.resolve()` para evitar fallos por rutas absolutas.\n\n### 2. Configuración de Túnel SSH (Localhost.run / Cloudflare Tunnel)\nPara exponer el servidor local a internet sin abrir puertos en el router:\n```bash\nssh -R 80:localhost:8000 nokey@localhost.run\n```\n\n### 3. Buenas Prácticas\n- Activar siempre modo WAL en SQLite.\n- Validar el email de destino antes del envío SMTP.\n- Comprobar encabezados de respuesta con CORS y UTF-8.",
+            "Alejandro (JaponPLX)",
+            "admin",
+            json.dumps(["DevOps", "CI/CD", "Cloud", "SSH", "Docker"]),
+            9
+        ),
+        (
+            "Estándares de Código, Git Workflow y Convenciones",
+            "estandares-codigo-git",
+            "Estándares & QA",
+            "## Convenciones de Desarrollo Kunkurt\n\n- **Commits**: Seguir Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `perf:`).\n- **Python**: PEP 8 estricto, uso de `urllib.parse` para codificación URL y manejo limpio de excepciones con logs.\n- **JavaScript**: Modularización sin frameworks pesados, renderizado reactivo a través de plantillas de texto e interactividad sin lag.\n- **Estilos**: Variables CSS (`--accent-purple`, `--bg-card`, `--border-color`) para coherencia estética.",
+            "Alejandro (JaponPLX)",
+            "admin",
+            json.dumps(["Git", "CleanCode", "JavaScript", "PEP8"]),
+            6
+        ),
+        (
+            "Protocolo de Gestión de Tickets e Incidencias Críticas",
+            "protocolo-tickets-incidencias",
+            "Operaciones & Soporte",
+            "## Matriz de Prioridad en Soporte\n\n- **Crítica (P1)**: Caída de servicio o fallo de seguridad. Tiempo de respuesta objetivo: < 1 hora. Notificación por webhook y correo a administración.\n- **Alta (P2)**: Degradación de rendimiento o fallo en módulos clave. Respuesta objetivo: < 4 horas.\n- **Media (P3)**: Peticiones de clientes o nuevas características. Respuesta: < 24 horas.\n- **Baja (P4)**: Mejoras visuales o sugerencias generales.\n\nTodo ticket resuelto debe contener un comentario de cierre documentando la solución aplicada.",
+            "Alejandro (JaponPLX)",
+            "admin",
+            json.dumps(["HelpDesk", "SLA", "Tickets", "Soporte"]),
+            11
+        )
+    ]
+
+    for a in sample_articles:
+        cursor.execute("""
+            INSERT INTO knowledge_base (title, slug, category, content, author_name, author_role, tags, views_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, a)
+    conn.commit()
+
+def get_knowledge_articles(category=None, search=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM knowledge_base"
+    params = []
+    conditions = []
+
+    if category and category != "all":
+        conditions.append("category = ?")
+        params.append(category)
+
+    if search:
+        conditions.append("(title LIKE ? OR content LIKE ? OR tags LIKE ?)")
+        s_term = f"%{search}%"
+        params.extend([s_term, s_term, s_term])
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += " ORDER BY updated_at DESC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    articles = []
+    for r in rows:
+        d = dict(r)
+        try:
+            d["tags"] = json.loads(d["tags"])
+        except Exception:
+            d["tags"] = []
+        articles.append(d)
+    conn.close()
+    return articles
+
+def get_knowledge_article(article_id_or_slug):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM knowledge_base
+        WHERE id = ? OR slug = ?
+    """, (article_id_or_slug, str(article_id_or_slug)))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    article = dict(row)
+    try:
+        article["tags"] = json.loads(article["tags"])
+    except Exception:
+        article["tags"] = []
+
+    # Increment view counter
+    cursor.execute("UPDATE knowledge_base SET views_count = views_count + 1 WHERE id = ?", (article["id"],))
+    conn.commit()
+    conn.close()
+    return article
+
+def create_knowledge_article(title, content, category, author_name, author_role, tags=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    import re
+    slug = re.sub(r'[^a-zA-Z0-9]+', '-', title.lower()).strip('-')
+    if not slug:
+        slug = f"article-{int(datetime.now().timestamp())}"
+    
+    # Check slug collision
+    cursor.execute("SELECT id FROM knowledge_base WHERE slug = ?", (slug,))
+    if cursor.fetchone():
+        slug = f"{slug}-{int(datetime.now().timestamp())}"
+
+    tags_json = json.dumps(tags or ["General"])
+    cursor.execute("""
+        INSERT INTO knowledge_base (title, slug, category, content, author_name, author_role, tags, views_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    """, (title, slug, category or "General", content, author_name, author_role or "developer", tags_json))
+    art_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return get_knowledge_article(art_id)
+
+# ============================================================================
+# ADVANCED ANALYTICS & METRICS MODULE
+# ============================================================================
+
+def get_advanced_analytics():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Total counts
+    cursor.execute("SELECT COUNT(*) FROM projects")
+    total_projects = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM users")
+    total_users = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM tickets")
+    total_tickets = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM team_messages")
+    total_messages = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM knowledge_base")
+    total_articles = cursor.fetchone()[0]
+
+    cursor.execute("SELECT SUM(likes_count) FROM projects")
+    total_likes = cursor.fetchone()[0] or 0
+
+    # Tech stack breakdown from projects
+    cursor.execute("SELECT tech_stack FROM projects")
+    tech_counter = {}
+    for r in cursor.fetchall():
+        try:
+            val = r[0]
+            if val.startswith('['):
+                items = json.loads(val)
+            else:
+                items = [x.strip() for x in val.split(',') if x.strip()]
+            for item in items:
+                tech = item.strip()
+                if tech:
+                    tech_counter[tech] = tech_counter.get(tech, 0) + 1
+        except Exception:
+            pass
+
+    sorted_tech = sorted(tech_counter.items(), key=lambda x: x[1], reverse=True)[:8]
+
+    # Tickets by status
+    cursor.execute("SELECT status, COUNT(*) FROM tickets GROUP BY status")
+    tickets_by_status = dict(cursor.fetchall())
+
+    # Tickets by priority
+    cursor.execute("SELECT priority, COUNT(*) FROM tickets GROUP BY priority")
+    tickets_by_priority = dict(cursor.fetchall())
+
+    # Projects by category
+    cursor.execute("SELECT category, COUNT(*) FROM projects GROUP BY category")
+    projects_by_category = dict(cursor.fetchall())
+
+    # Users by role
+    cursor.execute("SELECT role, COUNT(*) FROM users GROUP BY role")
+    users_by_role = dict(cursor.fetchall())
+
+    # Top viewed knowledge base articles
+    cursor.execute("SELECT title, views_count, category FROM knowledge_base ORDER BY views_count DESC LIMIT 5")
+    top_articles = [dict(r) for r in cursor.fetchall()]
+
+    conn.close()
+
+    return {
+        "totals": {
+            "projects": total_projects,
+            "users": total_users,
+            "tickets": total_tickets,
+            "messages": total_messages,
+            "articles": total_articles,
+            "likes": total_likes
+        },
+        "tech_stack": sorted_tech,
+        "tickets_by_status": tickets_by_status,
+        "tickets_by_priority": tickets_by_priority,
+        "projects_by_category": projects_by_category,
+        "users_by_role": users_by_role,
+        "top_articles": top_articles
+    }
+
+# ============================================================================
+# WEBHOOK SETTINGS MODULE
+# ============================================================================
+
+def get_webhook_settings():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM settings WHERE key LIKE 'webhook_%'")
+    rows = cursor.fetchall()
+    settings = {r["key"]: r["value"] for r in rows}
+    conn.close()
+    return {
+        "discord_url": settings.get("webhook_discord_url", ""),
+        "telegram_token": settings.get("webhook_telegram_token", ""),
+        "telegram_chat_id": settings.get("webhook_telegram_chat_id", ""),
+        "enabled": settings.get("webhook_enabled", "false") == "true",
+        "notify_on_ticket": settings.get("webhook_notify_ticket", "true") == "true",
+        "notify_on_login": settings.get("webhook_notify_login", "true") == "true",
+        "notify_on_quote": settings.get("webhook_notify_quote", "true") == "true"
+    }
+
+def save_webhook_settings(settings_dict):
+    conn = get_connection()
+    cursor = conn.cursor()
+    mapping = {
+        "webhook_discord_url": settings_dict.get("discord_url", ""),
+        "webhook_telegram_token": settings_dict.get("telegram_token", ""),
+        "webhook_telegram_chat_id": settings_dict.get("telegram_chat_id", ""),
+        "webhook_enabled": "true" if settings_dict.get("enabled") else "false",
+        "webhook_notify_ticket": "true" if settings_dict.get("notify_on_ticket", True) else "false",
+        "webhook_notify_login": "true" if settings_dict.get("notify_on_login", True) else "false",
+        "webhook_notify_quote": "true" if settings_dict.get("notify_on_quote", True) else "false"
+    }
+    for k, v in mapping.items():
+        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (k, str(v)))
+    conn.commit()
+    conn.close()
+    return get_webhook_settings()
+
+
 
 

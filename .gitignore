@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local environment & secrets
+.env
+.kunkurt_key*
+.active_port
+.email_notifications.log
+
+# Scratch and OS metadata
+.DS_Store
+Thumbs.db

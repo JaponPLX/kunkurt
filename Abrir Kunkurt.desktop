@@ -3,7 +3,7 @@ Version=1.0
 Type=Application
 Name=Kunkurt Devs
 Comment=Plataforma de Proyectos Kunkurt & JaponPLX
-Exec=xdg-open "/home/jugador/Descargas/kunkurt devs/static/index.html"
+Exec=bash -c 'DIR="$(dirname "%k")"; if [ -x "$DIR/abrir.sh" ]; then "$DIR/abrir.sh"; elif [ -f "$DIR/index.html" ]; then xdg-open "$DIR/index.html"; else xdg-open "$DIR/static/index.html"; fi'
 Icon=utilities-terminal
 Terminal=false
 Categories=Development;
