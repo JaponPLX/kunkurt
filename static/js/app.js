@@ -2279,6 +2279,7 @@ function switchToSection(section) {
   const catalogSection = document.getElementById("catalogSection");
   const ticketsSection = document.getElementById("ticketsSection");
   const quotationSection = document.getElementById("quotationSection");
+  const paymentsSection = document.getElementById("paymentsSection");
   const analyticsSection = document.getElementById("analyticsSection");
   const teamChatSection = document.getElementById("teamChatSection");
   const wikiSection = document.getElementById("wikiSection");
@@ -2287,6 +2288,7 @@ function switchToSection(section) {
     projects: catalogSection,
     tickets: ticketsSection,
     quotation: quotationSection,
+    payments: paymentsSection,
     analytics: analyticsSection,
     teamChat: teamChatSection,
     wiki: wikiSection
@@ -2296,6 +2298,7 @@ function switchToSection(section) {
     projects: document.getElementById("tabViewProjectsBtn"),
     tickets: document.getElementById("tabViewTicketsBtn"),
     quotation: document.getElementById("tabViewQuoteBtn"),
+    payments: document.getElementById("tabViewPaymentsBtn"),
     analytics: document.getElementById("tabViewAnalyticsBtn"),
     teamChat: document.getElementById("tabViewTeamChatBtn"),
     wiki: document.getElementById("tabViewWikiBtn")
@@ -2328,6 +2331,8 @@ function switchToSection(section) {
     loadTickets();
   } else if (section === "quotation") {
     calculateQuotation();
+  } else if (section === "payments") {
+    loadPayments();
   } else if (section === "analytics") {
     loadAnalyticsData();
   } else if (section === "teamChat") {
@@ -2971,12 +2976,26 @@ function calculateQuotation() {
 
   const costDisplay = document.getElementById("quoteTotalCostDisplay");
   const weeksDisplay = document.getElementById("quoteTotalWeeksDisplay");
+  const depositDisplay = document.getElementById("quoteDeposit50Display");
+  const finalDisplay = document.getElementById("quoteFinal50Display");
+  const btnPayDisplay = document.getElementById("btnPayQuoteAmountDisplay");
+
+  const deposit50 = Math.round(totalCost * 0.5);
 
   if (costDisplay) {
     costDisplay.textContent = `$${totalCost.toLocaleString("en-US")} USD`;
   }
   if (weeksDisplay) {
     weeksDisplay.textContent = `${totalWeeks} semanas`;
+  }
+  if (depositDisplay) {
+    depositDisplay.textContent = `$${deposit50.toLocaleString("en-US")} USD`;
+  }
+  if (finalDisplay) {
+    finalDisplay.textContent = `$${(totalCost - deposit50).toLocaleString("en-US")} USD`;
+  }
+  if (btnPayDisplay) {
+    btnPayDisplay.textContent = `$${deposit50.toLocaleString("en-US")} USD`;
   }
 
   return { totalCost, totalWeeks };
@@ -3057,6 +3076,428 @@ async function submitQuotationForm(e) {
       btnSubmit.disabled = false;
       btnSubmit.textContent = "🚀 Enviar Cotización y Abrir Ticket Oficial";
     }
+  }
+}
+
+// ============================================================================
+// PASARELAS DE PAGO & CHECKOUT GLOBAL CONTROLLER
+// ============================================================================
+let activePaymentGateway = "stripe";
+let paymentCurrentFullAmount = 1950;
+let paymentCurrentAmount = 975;
+let paymentCurrentMode = "deposit50";
+let paymentCurrentConcept = "Anticipo de Proyecto";
+
+function payQuotationDeposit() {
+  playCyberSound("click");
+  const nameInput = document.getElementById("quoteClientName");
+  const emailInput = document.getElementById("quoteClientEmail");
+  const companyInput = document.getElementById("quoteClientCompany");
+  const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
+  const projectTypeName = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white").textContent.trim() : "Solución de Software";
+
+  const { totalCost } = calculateQuotation();
+  const deposit = Math.round(totalCost * 0.5);
+
+  const clientName = nameInput ? nameInput.value.trim() : "";
+  const clientEmail = emailInput ? emailInput.value.trim() : "";
+  const clientCompany = companyInput ? companyInput.value.trim() : "";
+
+  openPaymentModal({
+    concept: `Anticipo 50% ${projectTypeName}`,
+    fullAmount: totalCost,
+    amount: deposit,
+    mode: "deposit50",
+    clientName: clientName,
+    clientEmail: clientEmail,
+    clientCompany: clientCompany,
+    gateway: "stripe"
+  });
+}
+
+function openPaymentModal(opts = {}) {
+  playCyberSound("click");
+  const modal = document.getElementById("paymentModal");
+  if (!modal) return;
+
+  const formContainer = document.getElementById("paymentFormContainer");
+  const successContainer = document.getElementById("paymentSuccessContainer");
+  if (formContainer) formContainer.classList.remove("hidden");
+  if (successContainer) successContainer.classList.add("hidden");
+
+  // Determine amounts and concept
+  paymentCurrentFullAmount = opts.fullAmount || opts.amount || 1950;
+  paymentCurrentAmount = opts.amount || (opts.mode === "full100" ? paymentCurrentFullAmount : Math.round(paymentCurrentFullAmount * 0.5));
+  paymentCurrentConcept = opts.concept || "Servicios de Ingeniería Kunkurt";
+  paymentCurrentMode = opts.mode || (opts.amount === paymentCurrentFullAmount ? "full100" : "deposit50");
+
+  // Populate UI
+  const conceptEl = document.getElementById("payModalConcept");
+  const fullEl = document.getElementById("payModalFullCostDisplay");
+  const opt50 = document.getElementById("payOption50Text");
+  const opt100 = document.getElementById("payOption100Text");
+
+  if (conceptEl) conceptEl.textContent = paymentCurrentConcept;
+  if (fullEl) fullEl.textContent = `$${paymentCurrentFullAmount.toLocaleString("en-US")} USD`;
+  if (opt50) opt50.textContent = `$${Math.round(paymentCurrentFullAmount * 0.5).toLocaleString("en-US")} USD`;
+  if (opt100) opt100.textContent = `$${paymentCurrentFullAmount.toLocaleString("en-US")} USD`;
+
+  updatePaymentAmountDisplay();
+
+  // Populate client info if available
+  const nameInput = document.getElementById("payClientName");
+  const emailInput = document.getElementById("payClientEmail");
+  if (nameInput && opts.clientName) nameInput.value = opts.clientName;
+  else if (nameInput && !nameInput.value && currentProfile && currentProfile.full_name) {
+    nameInput.value = currentProfile.full_name;
+  }
+  if (emailInput && opts.clientEmail) emailInput.value = opts.clientEmail;
+  else if (emailInput && !emailInput.value && currentProfile && currentProfile.email) {
+    emailInput.value = currentProfile.email;
+  }
+
+  // Set mode button styling
+  setPaymentMode(paymentCurrentMode);
+
+  // Set gateway tab
+  selectPaymentTab(opts.gateway || "stripe");
+
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closePaymentModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("paymentModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  document.body.style.overflow = "auto";
+}
+
+function setPaymentMode(mode) {
+  playCyberSound("click");
+  paymentCurrentMode = mode;
+  const btn50 = document.getElementById("btnPayMode50");
+  const btn100 = document.getElementById("btnPayMode100");
+
+  if (mode === "deposit50") {
+    paymentCurrentAmount = Math.round(paymentCurrentFullAmount * 0.5);
+    if (btn50) btn50.className = "py-2 rounded-lg font-bold transition-all bg-emerald-600 text-white shadow";
+    if (btn100) btn100.className = "py-2 rounded-lg font-bold transition-all text-slate-400 hover:text-white";
+  } else {
+    paymentCurrentAmount = paymentCurrentFullAmount;
+    if (btn50) btn50.className = "py-2 rounded-lg font-bold transition-all text-slate-400 hover:text-white";
+    if (btn100) btn100.className = "py-2 rounded-lg font-bold transition-all bg-emerald-600 text-white shadow";
+  }
+
+  updatePaymentAmountDisplay();
+}
+
+function updatePaymentAmountDisplay() {
+  const amtEl = document.getElementById("payModalAmountDisplay");
+  const localEl = document.getElementById("payModalLocalCurrencyDisplay");
+  if (amtEl) amtEl.textContent = `$${paymentCurrentAmount.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD`;
+  if (localEl) {
+    const cop = Math.round(paymentCurrentAmount * 4250).toLocaleString("es-CO");
+    const eur = Math.round(paymentCurrentAmount * 0.92).toLocaleString("de-DE");
+    localEl.textContent = `≈ $${cop} COP / €${eur} EUR`;
+  }
+}
+
+function selectPaymentTab(gateway) {
+  playCyberSound("click");
+  activePaymentGateway = gateway;
+  const gateways = ["stripe", "paypal", "mercadopago", "apple_pay", "crypto"];
+
+  gateways.forEach(g => {
+    const tabBtn = document.getElementById(`payTabBtn_${g}`);
+    const view = document.getElementById(`payGatewayView_${g}`);
+
+    if (g === gateway) {
+      if (tabBtn) {
+        tabBtn.className = "p-2.5 rounded-xl border border-emerald-500/60 bg-emerald-950/40 text-emerald-300 flex flex-col items-center gap-1 transition-all shadow-[0_0_15px_rgba(16,185,129,0.25)]";
+      }
+      if (view) view.classList.remove("hidden");
+    } else {
+      if (tabBtn) {
+        tabBtn.className = "p-2.5 rounded-xl border border-purple-500/20 bg-purple-950/20 text-slate-400 flex flex-col items-center gap-1 transition-all hover:border-slate-400 hover:text-white";
+      }
+      if (view) view.classList.add("hidden");
+    }
+  });
+
+  const emailVal = document.getElementById("payClientEmail")?.value || "cliente@empresa.com";
+  const paypalAccountEl = document.getElementById("paypalOrderAccountPreview");
+  if (paypalAccountEl) paypalAccountEl.textContent = emailVal;
+}
+
+function handleCardNumberInput(input) {
+  let value = input.value.replace(/\D/g, "");
+  if (value.length > 16) value = value.slice(0, 16);
+  const parts = [];
+  for (let i = 0; i < value.length; i += 4) {
+    parts.push(value.slice(i, i + 4));
+  }
+  input.value = parts.join(" ");
+
+  const iconEl = document.getElementById("stripeCardBrandIcon");
+  if (iconEl) {
+    if (value.startsWith("4")) iconEl.textContent = "💳 (Visa)";
+    else if (/^(5[1-5]|2[2-7])/.test(value)) iconEl.textContent = "💳 (Mastercard)";
+    else if (/^3[47]/.test(value)) iconEl.textContent = "💳 (Amex)";
+    else iconEl.textContent = "💳";
+  }
+}
+
+function handleCardExpiryInput(input) {
+  let value = input.value.replace(/\D/g, "");
+  if (value.length > 4) value = value.slice(0, 4);
+  if (value.length > 2) {
+    input.value = value.slice(0, 2) + "/" + value.slice(2);
+  } else {
+    input.value = value;
+  }
+}
+
+function toggleMercadoPagoView() {
+  playCyberSound("click");
+  const select = document.getElementById("mpMethodSelect");
+  const val = select ? select.value : "pse";
+  const pseView = document.getElementById("mpViewPse");
+  const qrView = document.getElementById("mpViewQr");
+
+  if (val === "pse" || val === "card") {
+    if (pseView) pseView.classList.remove("hidden");
+    if (qrView) qrView.classList.add("hidden");
+  } else if (val === "qr") {
+    if (pseView) pseView.classList.add("hidden");
+    if (qrView) qrView.classList.remove("hidden");
+  }
+}
+
+function triggerBiometricPay(brand) {
+  playCyberSound("chime");
+  showToast(`Autenticación biométrica ${brand} solicitada...`, "info");
+  setTimeout(() => {
+    processPaymentCheckout();
+  }, 900);
+}
+
+function updateCryptoAddress() {
+  playCyberSound("click");
+  const sel = document.getElementById("cryptoNetworkSelect");
+  const net = sel ? sel.value : "usdt_trc20";
+  const badge = document.getElementById("cryptoNetworkBadge");
+  const addrInput = document.getElementById("cryptoVaultAddress");
+
+  const addresses = {
+    usdt_trc20: { badge: "TRC-20 (Tron)", addr: "TQ7kX9JaponPLXKunkurtVaultDevs892Z" },
+    usdt_bep20: { badge: "BEP-20 (BNB Chain)", addr: "0x71C65E1E90aE002F4976eB484e5264b077a28864" },
+    usdt_polygon: { badge: "Polygon MATIC", addr: "0x71C65E1E90aE002F4976eB484e5264b077a28864" },
+    binance_pay: { badge: "Binance Pay ID", addr: "892014751 (Kunkurt Official Merchant)" }
+  };
+
+  const item = addresses[net] || addresses.usdt_trc20;
+  if (badge) badge.textContent = item.badge;
+  if (addrInput) addrInput.value = item.addr;
+}
+
+function copyCryptoVaultAddress() {
+  const addrInput = document.getElementById("cryptoVaultAddress");
+  if (!addrInput) return;
+  copyTextToClipboard(addrInput.value);
+  playCyberSound("success");
+  showToast("📋 Dirección de billetera copiada al portapapeles", "success");
+}
+
+function handleQuickPaymentForm(e) {
+  e.preventDefault();
+  playCyberSound("click");
+  const name = document.getElementById("quickPayName")?.value.trim() || "";
+  const email = document.getElementById("quickPayEmail")?.value.trim() || "";
+  const concept = document.getElementById("quickPayConcept")?.value.trim() || "Pago Directo Kunkurt";
+  const amount = parseFloat(document.getElementById("quickPayAmount")?.value || 500);
+  const gateway = document.getElementById("quickPayGateway")?.value || "stripe";
+
+  if (!name || !email) {
+    showToast("Por favor ingresa tu nombre y correo.", "error");
+    return;
+  }
+
+  openPaymentModal({
+    concept: concept,
+    amount: amount,
+    fullAmount: amount,
+    mode: "full100",
+    clientName: name,
+    clientEmail: email,
+    gateway: gateway
+  });
+}
+
+async function processPaymentCheckout() {
+  playCyberSound("click");
+  const nameInput = document.getElementById("payClientName");
+  const emailInput = document.getElementById("payClientEmail");
+  const btnProcess = document.getElementById("btnProcessPayment");
+
+  const clientName = nameInput ? nameInput.value.trim() : "";
+  const clientEmail = emailInput ? emailInput.value.trim() : "";
+
+  if (!clientName || !clientEmail) {
+    showToast("Por favor completa tu nombre y correo electrónico.", "error");
+    playCyberSound("error");
+    return;
+  }
+
+  if (btnProcess) {
+    btnProcess.disabled = true;
+    btnProcess.innerHTML = "<span>⏳</span> Procesando transacción segura...";
+  }
+
+  // Construct payment metadata based on selected gateway
+  let paymentData = {};
+  if (activePaymentGateway === "stripe") {
+    const cardNum = document.getElementById("stripeCardNumber")?.value.replace(/\s+/g, "") || "4242";
+    paymentData = {
+      card_last4: cardNum.slice(-4),
+      card_holder: document.getElementById("stripeCardHolder")?.value || clientName,
+      brand: cardNum.startsWith("4") ? "Visa" : "Mastercard"
+    };
+  } else if (activePaymentGateway === "paypal") {
+    paymentData = { paypal_email: clientEmail, checkout_mode: "express" };
+  } else if (activePaymentGateway === "mercadopago") {
+    paymentData = {
+      mp_method: document.getElementById("mpMethodSelect")?.value || "pse",
+      pse_bank: document.getElementById("mpPseBank")?.value || "bancolombia",
+      doc_number: document.getElementById("mpDocNumber")?.value || ""
+    };
+  } else if (activePaymentGateway === "crypto") {
+    paymentData = {
+      network: document.getElementById("cryptoNetworkSelect")?.value || "usdt_trc20",
+      tx_hash: document.getElementById("cryptoTxHash")?.value || ""
+    };
+  } else if (activePaymentGateway === "apple_pay") {
+    paymentData = { device_wallet: "Apple / Google Pay Biometric", biometric_verified: true };
+  }
+
+  try {
+    const res = await fetch("/api/payments/process", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Role": currentProfile ? currentProfile.role : "client",
+        "X-User-Email": clientEmail
+      },
+      body: JSON.stringify({
+        client_name: clientName,
+        client_email: clientEmail,
+        amount: paymentCurrentAmount,
+        currency: "USD",
+        gateway: activePaymentGateway,
+        concept: paymentCurrentConcept,
+        payment_data: paymentData
+      })
+    });
+
+    const data = await res.json();
+    if (btnProcess) {
+      btnProcess.disabled = false;
+      btnProcess.innerHTML = "<span>🔒</span> Confirmar y Procesar Pago Seguro";
+    }
+
+    if (data.success) {
+      playCyberSound("chime");
+      triggerCyberConfetti();
+      showNotification(`🎉 ¡Pago Aprobado! Ref: ${data.payment.transaction_id}. Notificación despachada a Gmail.`);
+
+      // Render Voucher in Success view
+      const formContainer = document.getElementById("paymentFormContainer");
+      const successContainer = document.getElementById("paymentSuccessContainer");
+      if (formContainer) formContainer.classList.add("hidden");
+      if (successContainer) successContainer.classList.remove("hidden");
+
+      const vTx = document.getElementById("voucherTxId");
+      const vName = document.getElementById("voucherClientName");
+      const vEmail = document.getElementById("voucherClientEmail");
+      const vGate = document.getElementById("voucherGateway");
+      const vAmt = document.getElementById("voucherAmount");
+
+      if (vTx) vTx.textContent = data.payment.transaction_id;
+      if (vName) vName.textContent = data.payment.client_name;
+      if (vEmail) vEmail.textContent = data.payment.client_email;
+      if (vGate) vGate.textContent = data.payment.gateway_title;
+      if (vAmt) vAmt.textContent = `$${parseFloat(data.payment.amount).toLocaleString("en-US", {minimumFractionDigits: 2})} USD`;
+
+      // Refresh tickets & payments tables
+      loadTickets();
+      loadPayments();
+    } else {
+      showToast(data.error || "No se pudo procesar el pago.", "error");
+      playCyberSound("error");
+    }
+  } catch (err) {
+    if (btnProcess) {
+      btnProcess.disabled = false;
+      btnProcess.innerHTML = "<span>🔒</span> Confirmar y Procesar Pago Seguro";
+    }
+    showToast("Error de conexión al procesar el pago: " + err.message, "error");
+    playCyberSound("error");
+  }
+}
+
+async function loadPayments() {
+  const tableBody = document.getElementById("paymentsTableBody");
+  if (!tableBody) return;
+
+  try {
+    const role = currentProfile ? currentProfile.role : "client";
+    const email = currentProfile ? currentProfile.email : "";
+    const res = await fetch("/api/payments", {
+      headers: {
+        "X-User-Role": role,
+        "X-User-Email": email
+      }
+    });
+    const data = await res.json();
+
+    if (data.success && data.payments && data.payments.length > 0) {
+      tableBody.innerHTML = data.payments.map(p => `
+        <tr class="hover:bg-purple-950/30 transition-colors">
+          <td class="py-3 px-3 text-emerald-400 font-bold">${escapeHTML(p.transaction_id)}</td>
+          <td class="py-3 px-3">
+            <span class="text-white font-medium block">${escapeHTML(p.client_name)}</span>
+            <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(p.client_email)}</span>
+          </td>
+          <td class="py-3 px-3 text-slate-300">${escapeHTML(p.concept || "Servicios")}</td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-indigo-950/80 text-indigo-300 border border-indigo-500/30">
+              ${escapeHTML(p.gateway_title || p.gateway)}
+            </span>
+          </td>
+          <td class="py-3 px-3 text-emerald-300 font-bold font-mono">
+            $${parseFloat(p.amount).toLocaleString("en-US", {minimumFractionDigits: 2})} ${escapeHTML(p.currency || "USD")}
+          </td>
+          <td class="py-3 px-3 text-slate-400 text-[10px]">${p.created_at || "Reciente"}</td>
+          <td class="py-3 px-3 text-right">
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">
+              ✓ Aprobado
+            </span>
+          </td>
+        </tr>
+      `).join("");
+    } else {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="7" class="py-8 text-center text-slate-400 font-sans">
+            <div class="text-2xl mb-1">💳</div>
+            No hay transacciones registradas aún. Al realizar tu primer pago aparecerá tu comprobante aquí.
+          </td>
+        </tr>
+      `;
+    }
+  } catch (err) {
+    console.error("Error cargando pagos:", err);
   }
 }
 
@@ -3725,6 +4166,20 @@ window.closeWebhookSettingsModal = closeWebhookSettingsModal;
 window.handleSaveWebhookSettings = handleSaveWebhookSettings;
 window.testWebhookConnection = testWebhookConnection;
 window.exportExecutiveDossier = exportExecutiveDossier;
+window.openPaymentModal = openPaymentModal;
+window.closePaymentModal = closePaymentModal;
+window.payQuotationDeposit = payQuotationDeposit;
+window.setPaymentMode = setPaymentMode;
+window.selectPaymentTab = selectPaymentTab;
+window.handleCardNumberInput = handleCardNumberInput;
+window.handleCardExpiryInput = handleCardExpiryInput;
+window.toggleMercadoPagoView = toggleMercadoPagoView;
+window.triggerBiometricPay = triggerBiometricPay;
+window.updateCryptoAddress = updateCryptoAddress;
+window.copyCryptoVaultAddress = copyCryptoVaultAddress;
+window.handleQuickPaymentForm = handleQuickPaymentForm;
+window.processPaymentCheckout = processPaymentCheckout;
+window.loadPayments = loadPayments;
 
 // ============================================================================
 // TOOLS & SETTINGS MODAL CONTROLLER
