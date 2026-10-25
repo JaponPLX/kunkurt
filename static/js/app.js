@@ -313,6 +313,19 @@ function updateRoleUI() {
 
 // Global Event Listeners
 function setupEventListeners() {
+  // Sticky Navbar dynamic shadow on scroll
+  window.addEventListener("scroll", () => {
+    const header = document.getElementById("mainAppHeader");
+    if (!header) return;
+    if (window.scrollY > 15) {
+      header.classList.add("shadow-[0_8px_32px_rgba(0,0,0,0.8)]", "border-cyan-500/40");
+      header.classList.remove("shadow-[0_4px_30px_rgba(0,0,0,0.6)]", "border-cyan-500/20");
+    } else {
+      header.classList.remove("shadow-[0_8px_32px_rgba(0,0,0,0.8)]", "border-cyan-500/40");
+      header.classList.add("shadow-[0_4px_30px_rgba(0,0,0,0.6)]", "border-cyan-500/20");
+    }
+  });
+
   const catButtons = document.querySelectorAll(".filter-cat-btn");
   catButtons.forEach(btn => {
     btn.addEventListener("click", () => {
