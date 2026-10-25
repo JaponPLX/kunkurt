@@ -276,6 +276,238 @@ def dispatch_webhook(title, description, fields=None, color=0x8b5cf6, event_type
 
     threading.Thread(target=_worker, daemon=True).start()
 
+def send_system_email(recipient_email, subject, body_text, body_html=None, from_name="Kunkurt Devs", async_dispatch=True):
+    """
+    Sends an email using the effective SMTP settings (e.g. Gmail smtp.gmail.com:587).
+    Always logs to EMAIL_LOG_PATH and handles errors gracefully without blocking or crashing.
+    """
+    if not recipient_email:
+        return False
+
+    def _send():
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        smtp_host, smtp_port, smtp_user, smtp_pass = get_effective_smtp_config()
+        email_sent_real = False
+        error_msg = ""
+
+        if smtp_host and smtp_user and smtp_pass:
+            try:
+                msg = MIMEMultipart("alternative")
+                msg["From"] = f"{from_name} <{smtp_user}>"
+                msg["To"] = recipient_email
+                msg["Subject"] = subject
+                msg.attach(MIMEText(body_text, "plain", "utf-8"))
+                if body_html:
+                    msg.attach(MIMEText(body_html, "html", "utf-8"))
+
+                with smtplib.SMTP(smtp_host, int(smtp_port), timeout=12) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+                email_sent_real = True
+            except Exception as e:
+                error_msg = str(e)
+                print(f"⚠️ Error enviando correo vía SMTP a {recipient_email}: {e}", flush=True)
+
+        status_label = "SENT_REAL_SMTP" if email_sent_real else (f"FAILED_SMTP: {error_msg}" if error_msg else "LOGGED_LOCAL")
+        log_entry = f"[{timestamp}] EMAIL to {recipient_email} | Subject: '{subject}' | Status: {status_label}\n"
+        try:
+            with open(str(EMAIL_LOG_PATH), "a", encoding="utf-8") as f:
+                f.write(log_entry)
+        except Exception:
+            pass
+
+        print(f"📧 Correo procesado: '{subject}' -> {recipient_email} [{status_label}]", flush=True)
+        return email_sent_real
+
+    if async_dispatch:
+        threading.Thread(target=_send, daemon=True).start()
+        return True
+    else:
+        return _send()
+
+def notify_ticket_created_emails(ticket):
+    """
+    Sends email alerts to Admin (alejandrobelno964@gmail.com) and client for new ticket.
+    """
+    code = ticket.get("ticket_code", "")
+    title = ticket.get("title", "")
+    author_name = ticket.get("author_name", "Usuario")
+    author_email = ticket.get("author_email", "")
+    category = ticket.get("category", "Soporte")
+    priority = ticket.get("priority", "media").upper()
+    project = ticket.get("project_title", "General")
+    desc = ticket.get("description", "")
+    created_at = ticket.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    # 1. Alert to Admin (Alejandro)
+    admin_subject = f"🎫 [Kunkurt HelpDesk] Nuevo Ticket #{code} ({priority}) de {author_name}"
+    admin_body = f"""Hola Alejandro,
+
+Se ha abierto un nuevo ticket en la mesa de ayuda de Kunkurt Devs:
+
+• Código: #{code}
+• Asunto: {title}
+• Autor: {author_name} ({author_email})
+• Categoría: {category}
+• Prioridad: {priority}
+• Proyecto: {project}
+• Fecha: {created_at}
+
+Descripción:
+--------------------------------------------------
+{desc}
+--------------------------------------------------
+
+Puedes responderle o asignarlo desde la consola de Kunkurt Devs.
+
+Atentamente,
+Plataforma Kunkurt Devs
+"""
+    send_system_email(ADMIN_EMAIL, admin_subject, admin_body)
+
+    # 2. Confirmation to Client
+    if author_email and author_email.lower() != ADMIN_EMAIL.lower():
+        client_subject = f"Confirmación de Ticket #{code} — Kunkurt Devs"
+        client_body = f"""Hola {author_name},
+
+Hemos recibido tu solicitud en la Mesa de Ayuda de Kunkurt Devs.
+
+• Número de Seguimiento: #{code}
+• Asunto: {title}
+• Prioridad: {priority}
+• Categoría: {category}
+
+Nuestro equipo de ingenieros está revisando los detalles. Puedes consultar el estado en cualquier momento con tu correo ({author_email}) desde nuestro portal.
+
+Atentamente,
+Soporte Técnico & Ingeniería
+Kunkurt Devs
+"""
+        send_system_email(author_email, client_subject, client_body)
+
+def notify_quotation_created_emails(body, ticket):
+    """
+    Sends email alerts to Admin and client for new quotation proposal.
+    """
+    client_name = body.get("client_name", "Cliente")
+    client_email = body.get("client_email", "")
+    client_company = body.get("client_company", "Particular")
+    project_type = body.get("project_type", "Web App Full-Stack")
+    budget_usd = float(body.get("budget_usd", 0))
+    timeline_weeks = int(body.get("timeline_weeks", 4))
+    features = body.get("features", [])
+    description = body.get("description", "")
+    ticket_code = ticket.get("ticket_code", "QUOTE")
+
+    # 1. Alert to Admin
+    admin_subject = f"💼 [Nueva Cotización] ${budget_usd:,.2f} USD de {client_name} ({client_company})"
+    admin_body = f"""Hola Alejandro,
+
+Un cliente potencial ha completado una cotización interactiva en Kunkurt Devs:
+
+• Cliente: {client_name}
+• Correo: {client_email}
+• Empresa: {client_company}
+• Tipo de Proyecto: {project_type}
+• Presupuesto Estimado: ${budget_usd:,.2f} USD
+• Tiempo Estimado: {timeline_weeks} semanas
+• Módulos Seleccionados: {', '.join(features) if features else 'Estándar'}
+• Ticket de Seguimiento: #{ticket_code}
+
+Detalles Adicionales:
+--------------------------------------------------
+{description or 'Sin especificaciones adicionales.'}
+--------------------------------------------------
+
+Atentamente,
+Kunkurt Cotizador Inteligente
+"""
+    send_system_email(ADMIN_EMAIL, admin_subject, admin_body)
+
+    # 2. Confirmation to Client
+    if client_email and client_email.lower() != ADMIN_EMAIL.lower():
+        client_subject = f"Propuesta & Cotización Estimada #{ticket_code} — Kunkurt Devs"
+        client_body = f"""Estimado/a {client_name},
+
+Gracias por cotizar tu proyecto con Kunkurt Devs.
+
+Resumen de tu estimación técnica:
+• Solución: {project_type}
+• Presupuesto Estimado: ${budget_usd:,.2f} USD
+• Cronograma Estimado: {timeline_weeks} semanas
+• Ticket de Seguimiento: #{ticket_code}
+
+Uno de nuestros arquitectos de software te contactará a la brevedad para afinar los detalles de ingeniería y dar inicio formal.
+
+Atentamente,
+Dirección de Proyectos & Consultoría
+Kunkurt Devs
+"""
+        send_system_email(client_email, client_subject, client_body)
+
+def notify_payment_completed_emails(payment):
+    """
+    Sends instant email alerts to Admin and receipt to client for a completed payment.
+    """
+    tx = payment.get("transaction_id", "")
+    client_name = payment.get("client_name", "Cliente")
+    client_email = payment.get("client_email", "")
+    amount = float(payment.get("amount", 0))
+    currency = payment.get("currency", "USD").upper()
+    gateway_title = payment.get("gateway_title", "Pasarela de Pago")
+    concept = payment.get("concept", "Servicios de Software")
+    created_at = payment.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    # 1. Alert to Admin (Alejandro)
+    admin_subject = f"🚨 [PAGO RECIBIDO] ${amount:,.2f} {currency} vía {gateway_title} — Ref: {tx}"
+    admin_body = f"""¡Excelente Alejandro!
+
+Se ha procesado exitosamente un pago en Kunkurt Devs:
+
+• ID de Transacción: {tx}
+• Monto: ${amount:,.2f} {currency}
+• Pasarela de Pago: {gateway_title}
+• Cliente: {client_name} ({client_email})
+• Concepto: {concept}
+• Fecha: {created_at}
+• Estado: Aprobado / Verificado
+
+Se ha registrado en el libro contable de la plataforma y generado el comprobante para el cliente.
+
+Atentamente,
+Kunkurt Global Payments Gateway
+"""
+    send_system_email(ADMIN_EMAIL, admin_subject, admin_body)
+
+    # 2. Receipt to Client
+    if client_email and client_email.lower() != ADMIN_EMAIL.lower():
+        client_subject = f"Comprobante de Pago Oficial #{tx} — Kunkurt Devs"
+        client_body = f"""Estimado/a {client_name},
+
+Hemos recibido y confirmado tu pago satisfactoriamente. A continuación los datos de tu recibo:
+
+==================================================
+           COMPROBANTE DE PAGO KUNKURT
+==================================================
+• Referencia / Transacción: {tx}
+• Fecha y Hora: {created_at}
+• Concepto: {concept}
+• Monto Pagado: ${amount:,.2f} {currency}
+• Método de Pago: {gateway_title}
+• Estado: APROBADO / VERIFICADO
+==================================================
+
+Conserva este comprobante para tu control contable. Nuestro equipo técnico continuará con las etapas acordadas de tu proyecto.
+
+¡Gracias por confiar en Kunkurt Devs!
+
+Atentamente,
+Departamento de Facturación & Cobranza
+Kunkurt Devs
+"""
+        send_system_email(client_email, client_subject, client_body)
+
 class KunkurtAPIHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(STATIC_DIR), **kwargs)
@@ -287,7 +519,7 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Role")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Role, X-User-Email")
         self.end_headers()
         self.wfile.write(body)
 
@@ -302,7 +534,7 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Role")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Role, X-User-Email")
         self.end_headers()
 
     def do_GET(self):
@@ -409,14 +641,31 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
             priority = query.get("priority", [None])[0]
             category = query.get("category", [None])[0]
             search = query.get("search", [None])[0]
+            req_role = self.headers.get("X-User-Role", "").strip().lower()
+            req_email = self.headers.get("X-User-Email", "").strip().lower()
 
-            tickets = database.get_tickets(
-                status=status,
-                priority=priority,
-                category=category,
-                search=search
-            )
-            stats = database.get_ticket_stats()
+            # For clients or public visitors, restrict strictly to their own tickets
+            if req_role in ("client", "public", "cliente") or not req_role:
+                author_filter = req_email if (req_email and req_role == "client") else "none@unauthenticated"
+                tickets = database.get_tickets(
+                    status=status,
+                    priority=priority,
+                    category=category,
+                    search=search,
+                    author_email=author_filter
+                )
+                stats = database.get_ticket_stats(author_email=author_filter)
+            else:
+                author_email = query.get("author_email", [None])[0]
+                tickets = database.get_tickets(
+                    status=status,
+                    priority=priority,
+                    category=category,
+                    search=search,
+                    author_email=author_email
+                )
+                stats = database.get_ticket_stats(author_email=author_email)
+
             self.send_json({"success": True, "tickets": tickets, "stats": stats})
             return
 
@@ -427,6 +676,12 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
                 ticket_id = parts[2]
                 ticket = database.get_ticket(ticket_id)
                 if ticket:
+                    req_role = self.headers.get("X-User-Role", "").strip().lower()
+                    req_email = self.headers.get("X-User-Email", "").strip().lower()
+                    if req_role in ("client", "public", "cliente") or not req_role:
+                        if ticket.get("author_email", "").strip().lower() != req_email:
+                            self.send_json({"success": False, "error": "Acceso restringido: Solo puedes consultar tus propios tickets."}, 403)
+                            return
                     self.send_json({"success": True, "ticket": ticket})
                 else:
                     self.send_json({"success": False, "error": "Ticket no encontrado"}, 404)
@@ -452,8 +707,26 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
             self.send_json({"success": True, "analytics": analytics})
             return
 
+        # API: Global Payments & Financial Ledger
+        if path == "/api/payments":
+            req_role = self.headers.get("X-User-Role", "").strip().lower()
+            req_email = self.headers.get("X-User-Email", "").strip().lower()
+            if req_role in ("client", "public", "cliente") or not req_role:
+                author_filter = req_email if (req_email and req_role == "client") else "none@unauthenticated"
+                payments = database.get_payments(limit=50, client_email=author_filter)
+                stats = database.get_payment_stats()
+            else:
+                payments = database.get_payments(limit=100)
+                stats = database.get_payment_stats()
+            self.send_json({"success": True, "payments": payments, "stats": stats})
+            return
+
         # API: Team Live Messages
         if path == "/api/team/messages":
+            req_role = self.headers.get("X-User-Role", "").strip().lower()
+            if req_role in ("client", "public", "cliente") or not req_role:
+                self.send_json({"success": False, "error": "Acceso restringido: El Chat de Equipo es de uso exclusivo para colaboradores e ingenieros internos de Kunkurt."}, 403)
+                return
             limit = int(query.get("limit", [60])[0])
             msgs = database.get_team_messages(limit=limit)
             self.send_json({"success": True, "messages": msgs})
@@ -878,7 +1151,7 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
             return
 
         # API: Create Ticket
-        if path == "/api/tickets/create":
+        if path == "/api/tickets" or path == "/api/tickets/create":
             title = body.get("title", "").strip()
             description = body.get("description", "").strip()
             category = body.get("category", "Soporte").strip()
@@ -920,6 +1193,9 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
                 color=0xef4444 if ticket['priority'] == 'critica' else 0x8b5cf6,
                 event_type="ticket"
             )
+
+            # Gmail Notification to Admin & Confirmation to Client
+            notify_ticket_created_emails(ticket)
 
             self.send_json({"success": True, "ticket": ticket, "message": f"Ticket #{ticket['ticket_code']} creado exitosamente."})
             return
@@ -984,6 +1260,12 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
 
         # API: Team Live Messages (Chat & Announcements)
         if path == "/api/team/messages":
+            req_role = self.headers.get("X-User-Role", "").strip().lower()
+            user_role = body.get("user_role", "developer").strip()
+            if req_role in ("client", "public", "cliente") or user_role.lower() in ("client", "public", "cliente"):
+                self.send_json({"success": False, "error": "Acceso denegado: El Chat de Equipo es de uso exclusivo para ingenieros y colaboradores internos."}, 403)
+                return
+
             user_name = body.get("user_name", "").strip()
             user_email = body.get("user_email", "").strip()
             user_role = body.get("user_role", "developer").strip()
@@ -1089,6 +1371,9 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
                 event_type="quote"
             )
 
+            # Gmail Notification to Admin & Confirmation to Client
+            notify_quotation_created_emails(body, ticket)
+
             self.send_json({
                 "success": True,
                 "message": "Cotización procesada exitosamente. Se ha generado el ticket de seguimiento.",
@@ -1099,6 +1384,100 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
                     "timeline_weeks": timeline_weeks,
                     "ticket_code": ticket["ticket_code"]
                 }
+            })
+            return
+
+        # API: Process Global Payment (Stripe, PayPal, MercadoPago, Apple Pay, Google Pay, Cripto)
+        if path == "/api/payments/process" or path == "/api/payments":
+            client_name = body.get("client_name", "").strip()
+            client_email = body.get("client_email", "").strip().lower()
+            client_company = body.get("client_company", "").strip()
+            amount = float(body.get("amount", 0))
+            currency = body.get("currency", "USD").strip().upper() or "USD"
+            gateway = body.get("gateway", "stripe").strip().lower()
+            gateway_title = body.get("gateway_title", "").strip()
+            concept = body.get("concept", "Desarrollo de Software & Arquitectura Cloud").strip()
+            payment_data = body.get("payment_data", {})
+
+            if not client_name or not client_email:
+                self.send_json({"success": False, "error": "Nombre y correo son obligatorios para procesar el pago."}, 400)
+                return
+
+            if amount <= 0:
+                self.send_json({"success": False, "error": "El monto a pagar debe ser mayor a 0."}, 400)
+                return
+
+            gateway_titles_map = {
+                "stripe": "Stripe (Visa / Mastercard / Amex)",
+                "paypal": "PayPal Global Checkout",
+                "mercadopago": "Mercado Pago (PSE / Tarjetas Latam)",
+                "apple_pay": "Apple Pay (Biométrico Móvil)",
+                "google_pay": "Google Pay (Biométrico 1-Tap)",
+                "crypto": "Cripto / Web3 (Binance Pay & USDT)"
+            }
+            if not gateway_title:
+                gateway_title = gateway_titles_map.get(gateway, gateway.upper())
+
+            # Automatically create or link support ticket in HelpDesk
+            ticket_desc = (
+                f"Transacción de Pago Registrada:\n\n"
+                f"• Cliente: {client_name} ({client_email})\n"
+                f"• Monto: ${amount:,.2f} {currency}\n"
+                f"• Pasarela: {gateway_title}\n"
+                f"• Concepto: {concept}\n"
+                f"• Estado: Completado y Verificado\n"
+                f"• Detalles de Facturación: {client_company or 'Cliente Particular'}"
+            )
+            ticket = database.create_ticket(
+                title=f"Pago Aprobado: ${amount:,.2f} {currency} ({gateway_title})",
+                description=ticket_desc,
+                category="Facturación & Pagos",
+                priority="alta",
+                project_id=None,
+                project_title="Facturación & Finanzas",
+                author_name=client_name,
+                author_email=client_email,
+                author_role="cliente"
+            )
+
+            # Register transaction in payments table
+            payment = database.create_payment(
+                client_name=client_name,
+                client_email=client_email,
+                amount=amount,
+                gateway=gateway,
+                gateway_title=gateway_title,
+                concept=concept,
+                client_company=client_company,
+                currency=currency,
+                status="completed",
+                payment_data=payment_data,
+                ticket_id=ticket.get("id"),
+                ticket_code=ticket.get("ticket_code")
+            )
+
+            # Webhook dispatch
+            dispatch_webhook(
+                title=f"💳 Pago Recibido: ${amount:,.2f} {currency}",
+                description=f"**{client_name}** realizó un pago exitoso vía **{gateway_title}**.",
+                fields={
+                    "Referencia": payment.get("transaction_id", ""),
+                    "Concepto": concept,
+                    "Monto": f"${amount:,.2f} {currency}",
+                    "Email": client_email
+                },
+                color=0x10b981,
+                event_type="payment"
+            )
+
+            # Real Gmail notification dispatch to Admin and Client
+            notify_payment_completed_emails(payment)
+
+            self.send_json({
+                "success": True,
+                "message": "Pago procesado y verificado exitosamente.",
+                "payment": payment,
+                "ticket": ticket
             })
             return
 

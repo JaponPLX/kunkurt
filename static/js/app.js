@@ -28,13 +28,24 @@ const PROFILES = {
     avatar: "https://avatars.githubusercontent.com/u/171938813?v=4",
     badgeClass: "from-violet-500 to-indigo-600"
   },
+  client: {
+    id: 0,
+    username: "cliente",
+    name: "Cliente Kunkurt",
+    email: "cliente@kunkurt.com",
+    role: "client",
+    roleName: "Cliente & Solicitante",
+    department: "Clientes y Aliados",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+    badgeClass: "from-cyan-500 to-blue-600"
+  },
   public: {
     id: 0,
     username: "guest",
     name: "Visitante Externo",
     email: "cliente@kunkurt.com",
     role: "public",
-    roleName: "Vista Portafolio Cliente",
+    roleName: "Vista Portafolio Visitante",
     department: "Clientes y Aliados",
     avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
     badgeClass: "from-slate-600 to-slate-700"
@@ -274,6 +285,19 @@ function updateRoleUI() {
   const navLogoutBtn = document.getElementById("navLogoutBtn");
   if (navLoginBtn) navLoginBtn.style.display = currentRole === "public" ? "inline-flex" : "none";
   if (navLogoutBtn) navLogoutBtn.style.display = currentRole !== "public" ? "inline-flex" : "none";
+
+  // RBAC: Chat de Equipo es exclusivo para ingenieros y colaboradores internos (oculto para clientes y visitantes)
+  const isStaff = ["admin", "developer", "qa", "designer", "manager", "employee"].includes(currentRole);
+  const teamChatBtn = document.getElementById("tabViewTeamChatBtn");
+  if (teamChatBtn) {
+    teamChatBtn.style.display = isStaff ? "inline-flex" : "none";
+  }
+
+  // Si un cliente o visitante intenta estar en la pestaña de chat, redirigir al catálogo
+  const teamChatSec = document.getElementById("teamChatSection");
+  if (!isStaff && teamChatSec && !teamChatSec.classList.contains("hidden")) {
+    switchToSection("projects");
+  }
 }
 
 // Global Event Listeners
@@ -1575,6 +1599,7 @@ function renderAdminEmployeesTable(employees) {
     { value: "designer", label: "🎨 Diseñador UI/UX" },
     { value: "manager", label: "📊 Project Manager" },
     { value: "employee", label: "👥 Colaborador" },
+    { value: "client", label: "👤 Cliente / Soporte" },
     { value: "admin", label: "👑 Administrador" }
   ];
 
@@ -2328,8 +2353,13 @@ async function loadTickets() {
   let url = `/api/tickets?status=${encodeURIComponent(status)}&priority=${encodeURIComponent(priority)}&category=${encodeURIComponent(category)}`;
   if (search) url += `&search=${encodeURIComponent(search)}`;
 
+  const headers = {
+    "X-User-Role": currentRole,
+    "X-User-Email": activeProfile?.email || ""
+  };
+
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { headers });
     const data = await res.json();
     if (data.success) {
       ticketsList = data.tickets || [];
@@ -2364,7 +2394,25 @@ function renderTickets(tickets) {
   const emptyState = document.getElementById("ticketsEmptyState");
   if (!grid) return;
 
+  const isStaff = ["admin", "developer", "qa", "designer", "manager", "employee"].includes(currentRole);
+
   if (!tickets || tickets.length === 0) {
+    if (!isStaff) {
+      grid.innerHTML = `
+        <div class="col-span-full py-12 px-6 rounded-3xl bg-white/[0.02] border border-cyan-500/30 text-center max-w-lg mx-auto">
+          <span class="text-4xl block mb-3">🎫</span>
+          <h4 class="text-base font-bold text-white mb-1.5">Mesa de Ayuda & Soporte</h4>
+          <p class="text-xs text-slate-400 mb-5 leading-relaxed">
+            No tienes tickets de soporte registrados en este momento. Si necesitas ayuda técnica, reportar una incidencia o solicitar cambios, abre un ticket con nuestro equipo.
+          </p>
+          <button onclick="openCreateTicketModal()" class="btn-neon text-xs py-2.5 px-6">
+            ➕ Abrir Ticket de Soporte
+          </button>
+        </div>
+      `;
+      if (emptyState) emptyState.classList.add("hidden");
+      return;
+    }
     grid.innerHTML = "";
     if (emptyState) emptyState.classList.remove("hidden");
     return;
@@ -2489,13 +2537,19 @@ function openCreateTicketModal() {
   const modal = document.getElementById("createTicketModal");
   if (modal) modal.classList.remove("hidden");
 
+  const isStaff = ["admin", "developer", "qa", "designer", "manager", "employee"].includes(currentRole);
+  const assigneeContainer = document.getElementById("ticketAssigneeContainer");
+  if (assigneeContainer) {
+    assigneeContainer.style.display = isStaff ? "block" : "none";
+  }
+
   // Autofill name and email if user is logged in
   const nameInput = document.getElementById("ticketAuthorName");
   const emailInput = document.getElementById("ticketAuthorEmail");
-  if (nameInput && !nameInput.value && activeProfile && activeProfile.name) {
+  if (nameInput && activeProfile && activeProfile.name && currentRole !== "public") {
     nameInput.value = activeProfile.name;
   }
-  if (emailInput && !emailInput.value && activeProfile && activeProfile.email) {
+  if (emailInput && activeProfile && activeProfile.email && currentRole !== "public") {
     emailInput.value = activeProfile.email;
   }
 
@@ -2587,13 +2641,18 @@ async function openTicketDetail(ticketId) {
   modal.classList.remove("hidden");
 
   try {
-    const res = await fetch(`/api/tickets/${ticketId}`);
+    const res = await fetch(`/api/tickets/${ticketId}`, {
+      headers: {
+        "X-User-Role": currentRole,
+        "X-User-Email": activeProfile?.email || ""
+      }
+    });
     const data = await res.json();
     if (data.success && data.ticket) {
       currentTicket = data.ticket;
       renderTicketDetailModal(currentTicket);
     } else {
-      showToast("No se pudo cargar el ticket", "error");
+      showToast(data.error || "No se pudo cargar el ticket", "error");
       closeTicketDetailModal();
     }
   } catch (err) {
@@ -2616,6 +2675,8 @@ function renderTicketDetailModal(t) {
   const commentsList = document.getElementById("detailTicketCommentsList");
   const commentsCount = document.getElementById("detailTicketCommentsCount");
 
+  const isStaff = ["admin", "developer", "qa", "designer", "manager", "employee"].includes(currentRole);
+
   if (code) code.textContent = t.ticket_code;
   if (title) title.textContent = t.title;
   if (author) author.textContent = `${t.author_name} (${t.author_email})`;
@@ -2632,9 +2693,13 @@ function renderTicketDetailModal(t) {
   }
   if (categoryBadge) categoryBadge.textContent = t.category || "Soporte";
 
-  if (statusSelect) statusSelect.value = t.status;
+  if (statusSelect) {
+    statusSelect.value = t.status;
+    statusSelect.disabled = !isStaff;
+  }
 
   if (assigneeSelect) {
+    assigneeSelect.disabled = !isStaff;
     assigneeSelect.innerHTML = `<option value="">-- Sin Asignar --</option>` +
       authorizedEmployeesList.map(emp => `<option value="${emp.id}" ${t.assigned_id == emp.id ? 'selected' : ''}>${emp.full_name} (${emp.role})</option>`).join("");
   }
@@ -3080,8 +3145,16 @@ async function loadAnalyticsData() {
 // CHAT DEL EQUIPO & TABLÓN DE ANUNCIOS OFICIALES
 // ============================================================================
 async function loadTeamMessages() {
+  const isStaff = ["admin", "developer", "qa", "designer", "manager", "employee"].includes(currentRole);
+  if (!isStaff) return;
+
   try {
-    const res = await fetch("/api/team/messages");
+    const res = await fetch("/api/team/messages", {
+      headers: {
+        "X-User-Role": currentRole,
+        "X-User-Email": activeProfile?.email || ""
+      }
+    });
     const data = await res.json();
     if (!data.success) return;
 
@@ -3144,6 +3217,13 @@ async function loadTeamMessages() {
 async function sendTeamChatMessage(e) {
   e.preventDefault();
   playCyberSound("click");
+
+  const isStaff = ["admin", "developer", "qa", "designer", "manager", "employee"].includes(currentRole);
+  if (!isStaff) {
+    showToast("Acceso restringido: El Chat de Equipo es exclusivo para colaboradores e ingenieros.", "error");
+    return;
+  }
+
   const input = document.getElementById("teamChatInput");
   const pinCb = document.getElementById("chatPinCheckbox");
   const btn = document.getElementById("btnSendChatMessage");
@@ -3160,7 +3240,11 @@ async function sendTeamChatMessage(e) {
   try {
     const res = await fetch("/api/team/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Role": currentRole,
+        "X-User-Email": activeProfile?.email || ""
+      },
       body: JSON.stringify({
         user_name: user.name || user.username || "Colaborador",
         user_email: user.email || "dev@kunkurt.com",

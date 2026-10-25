@@ -222,6 +222,27 @@ def init_db(force_seed=False):
     );
     """)
 
+    # Payments & Global Checkout Transactions table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS payments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id TEXT UNIQUE NOT NULL,
+        client_name TEXT NOT NULL,
+        client_email TEXT NOT NULL,
+        client_company TEXT DEFAULT '',
+        amount REAL NOT NULL,
+        currency TEXT DEFAULT 'USD',
+        gateway TEXT NOT NULL,
+        gateway_title TEXT NOT NULL,
+        concept TEXT NOT NULL,
+        status TEXT DEFAULT 'completed',
+        payment_data TEXT DEFAULT '{}',
+        ticket_id INTEGER,
+        ticket_code TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     # Ensure password column exists in users
     cursor.execute("PRAGMA table_info(users)")
     cols = [r["name"] for r in cursor.fetchall()]
@@ -922,8 +943,9 @@ def register_user(full_name, email, password="", department="Equipo Kunkurt Devs
         conn.close()
         return None, "Ya existe un usuario registrado con este correo o nombre de usuario."
 
-    role = "admin" if email == ADMIN_EMAIL.lower() else "employee"
-    badge_label = "👑 Administrador Fundador" if role == "admin" else "🌟 Nuevo Integrante"
+    role = "admin" if email == ADMIN_EMAIL.lower() else "client"
+    badge_label = "👑 Administrador Fundador" if role == "admin" else "🌐 Cliente Autorizado"
+    effective_dept = department if role == "admin" else "Clientes & Soporte"
 
     cursor.execute("""
         INSERT INTO users (username, full_name, email, role, avatar_url, department, badges, points, password)
@@ -933,8 +955,8 @@ def register_user(full_name, email, password="", department="Equipo Kunkurt Devs
         full_name,
         email,
         role,
-        f"https://ui-avatars.com/api/?name={urllib.parse.quote(full_name)}&background=8b5cf6&color=fff",
-        department or "Equipo Kunkurt Devs",
+        f"https://ui-avatars.com/api/?name={urllib.parse.quote(full_name)}&background=06b6d4&color=fff",
+        effective_dept,
         json.dumps([badge_label, f"Rol: {role.title()}"]),
         150,
         password or ""
@@ -1089,7 +1111,7 @@ def create_ticket(title, description, category, priority, project_id, project_ti
     conn.close()
     return get_ticket(ticket_id)
 
-def get_tickets(status=None, priority=None, category=None, search=None):
+def get_tickets(status=None, priority=None, category=None, search=None, author_email=None):
     conn = get_connection()
     cursor = conn.cursor()
     query = """
@@ -1099,6 +1121,10 @@ def get_tickets(status=None, priority=None, category=None, search=None):
         WHERE 1=1
     """
     params = []
+
+    if author_email:
+        query += " AND LOWER(t.author_email) = ?"
+        params.append(author_email.strip().lower())
 
     if status and status != "all":
         query += " AND t.status = ?"
@@ -1232,22 +1258,29 @@ def add_ticket_comment(ticket_id, user_name, user_email, user_role, content, use
     conn.close()
     return c
 
-def get_ticket_stats():
+def get_ticket_stats(author_email=None):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM tickets")
+    base_where = ""
+    params = []
+    if author_email:
+        base_where = " WHERE LOWER(author_email) = ?"
+        params = [author_email.strip().lower()]
+
+    cursor.execute(f"SELECT COUNT(*) FROM tickets{base_where}", params)
     total = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status = 'abierto'")
+    and_or_where = " AND " if base_where else " WHERE "
+    cursor.execute(f"SELECT COUNT(*) FROM tickets{base_where}{and_or_where}status = 'abierto'", params)
     abiertos = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status = 'en_progreso'")
+    cursor.execute(f"SELECT COUNT(*) FROM tickets{base_where}{and_or_where}status = 'en_progreso'", params)
     en_progreso = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE status IN ('resuelto', 'cerrado')")
+    cursor.execute(f"SELECT COUNT(*) FROM tickets{base_where}{and_or_where}status IN ('resuelto', 'cerrado')", params)
     resueltos = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM tickets WHERE priority = 'critica' AND status != 'cerrado'")
+    cursor.execute(f"SELECT COUNT(*) FROM tickets{base_where}{and_or_where}priority = 'critica' AND status != 'cerrado'", params)
     criticos = cursor.fetchone()[0]
 
     conn.close()
@@ -1588,6 +1621,103 @@ def save_webhook_settings(settings_dict):
     conn.commit()
     conn.close()
     return get_webhook_settings()
+
+# ============================================================================
+# PAYMENTS & CHECKOUT MODULE
+# ============================================================================
+
+def create_payment(client_name, client_email, amount, gateway, gateway_title, concept,
+                   client_company="", currency="USD", status="completed", payment_data=None,
+                   ticket_id=None, ticket_code=None):
+    """
+    Registers a new payment transaction in the database and creates an internal notification.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Generate a unique professional transaction ID
+    import uuid
+    tx_code = f"PAY-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+
+    p_data_str = json.dumps(payment_data or {}, ensure_ascii=False)
+
+    cursor.execute("""
+        INSERT INTO payments (
+            transaction_id, client_name, client_email, client_company,
+            amount, currency, gateway, gateway_title, concept, status,
+            payment_data, ticket_id, ticket_code
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        tx_code, client_name, client_email, client_company,
+        float(amount), currency.upper(), gateway.lower(), gateway_title,
+        concept, status, p_data_str, ticket_id, ticket_code
+    ))
+
+    pay_id = cursor.lastrowid
+
+    # Add notification to internal feed
+    cursor.execute("""
+        INSERT INTO notifications (title, message, type, time_ago, is_read)
+        VALUES (?, ?, 'approval', 'Hace un momento', 0)
+    """, (
+        f"💳 Pago Recibido [{gateway_title}]",
+        f"{client_name} completó un pago de ${float(amount):,.2f} {currency.upper()} ({concept}). Ref: {tx_code}"
+    ))
+
+    conn.commit()
+    cursor.execute("SELECT * FROM payments WHERE id = ?", (pay_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_payments(limit=50, client_email=None):
+    """
+    Retrieves payment history, filtered by client email if provided.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if client_email:
+        cursor.execute("""
+            SELECT * FROM payments
+            WHERE LOWER(client_email) = LOWER(?)
+            ORDER BY id DESC LIMIT ?
+        """, (client_email.strip(), limit))
+    else:
+        cursor.execute("""
+            SELECT * FROM payments
+            ORDER BY id DESC LIMIT ?
+        """, (limit,))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_payment_stats():
+    """
+    Calculates key financial metrics from registered payments.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT COUNT(*), COALESCE(SUM(amount), 0) FROM payments WHERE status = 'completed'")
+    count, total_usd = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT gateway, COUNT(*), COALESCE(SUM(amount), 0)
+        FROM payments
+        WHERE status = 'completed'
+        GROUP BY gateway
+    """)
+    by_gateway = [{"gateway": r[0], "count": r[1], "total": r[2]} for r in cursor.fetchall()]
+
+    conn.close()
+    return {
+        "completed_count": count or 0,
+        "total_revenue_usd": round(total_usd or 0, 2),
+        "by_gateway": by_gateway
+    }
+
 
 
 

@@ -239,6 +239,9 @@
         <button id="tabViewQuoteBtn" onclick="switchToSection('quotation')" class="pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 whitespace-nowrap">
           <span>⚡</span> Cotizador
         </button>
+        <button id="tabViewPaymentsBtn" onclick="switchToSection('payments')" class="pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 whitespace-nowrap">
+          <span>💳</span> Pasarelas de Pago
+        </button>
         <button id="tabViewAnalyticsBtn" onclick="switchToSection('analytics')" class="pb-3 px-3 sm:px-4 text-xs sm:text-sm font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 whitespace-nowrap">
           <span>📊</span> Métricas & Analytics
         </button>
@@ -251,6 +254,9 @@
       </div>
 
       <div class="flex items-center gap-2 pb-2 lg:pb-0">
+        <button onclick="openPaymentModal()" class="btn-ghost-neon text-xs py-1.5 px-3 border-emerald-500/30 text-emerald-300 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
+          <span>💳</span> Pagar Online
+        </button>
         <button onclick="switchToSection('quotation')" class="btn-ghost-neon text-xs py-1.5 px-3 border-cyan-500/30 text-cyan-300 hover:text-white flex items-center gap-1.5 whitespace-nowrap">
           <span>⚡</span> Cotizar Proyecto
         </button>
@@ -496,6 +502,11 @@
                 <span>⏱️ Cronograma:</span>
                 <span id="quoteTotalWeeksDisplay" class="font-bold text-white">4 semanas</span>
               </div>
+              <div class="mt-2.5 pt-2 border-t border-purple-800/40 flex items-center justify-around text-[11px] font-mono">
+                <span class="text-slate-400">Anticipo 50%: <strong id="quoteDeposit50Display" class="text-emerald-400 font-bold">$975 USD</strong></span>
+                <span class="text-slate-500">|</span>
+                <span class="text-slate-400">Saldo Contraentrega: <strong id="quoteFinal50Display" class="text-cyan-400 font-bold">$975 USD</strong></span>
+              </div>
             </div>
 
             <!-- Client Contact Details -->
@@ -517,9 +528,45 @@
                 <textarea id="quoteClientDetails" rows="2" placeholder="Describe brevemente tus expectativas o especificaciones..." class="cyber-input text-xs py-2"></textarea>
               </div>
 
-              <button type="submit" id="btnSubmitQuote" class="btn-neon w-full py-3 justify-center text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-fuchsia-600 shadow-[0_0_25px_rgba(16,185,129,0.4)]">
-                🚀 Enviar Cotización y Abrir Ticket Oficial
-              </button>
+              <!-- Pasarelas de Pago Globales Disponibles -->
+              <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+                <div class="flex items-center justify-between text-[11px] font-bold text-slate-300">
+                  <span class="flex items-center gap-1.5">💳 Métodos de Pago Globales</span>
+                  <span class="text-[9px] text-emerald-400 font-mono">🔒 SSL 256-BIT</span>
+                </div>
+                <div class="grid grid-cols-5 gap-1.5 text-center">
+                  <div class="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/40 text-[10px] text-slate-300 flex flex-col items-center gap-1" title="Stripe (Visa, Mastercard, Amex)">
+                    <span class="text-base">💳</span>
+                    <span class="text-[9px] font-bold">Stripe</span>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/40 text-[10px] text-slate-300 flex flex-col items-center gap-1" title="PayPal Global 1-Click">
+                    <span class="text-base">🅿️</span>
+                    <span class="text-[9px] font-bold">PayPal</span>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/40 text-[10px] text-slate-300 flex flex-col items-center gap-1" title="Mercado Pago (PSE / Tarjetas Latam)">
+                    <span class="text-base">💙</span>
+                    <span class="text-[9px] font-bold">MercadoPago</span>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/40 text-[10px] text-slate-300 flex flex-col items-center gap-1" title="Apple Pay & Google Pay">
+                    <span class="text-base">📱</span>
+                    <span class="text-[9px] font-bold">Apple/GPay</span>
+                  </div>
+                  <div class="p-1.5 rounded-lg bg-slate-900/60 border border-slate-700/40 text-[10px] text-slate-300 flex flex-col items-center gap-1" title="Binance Pay & USDT Cripto">
+                    <span class="text-base">🟡</span>
+                    <span class="text-[9px] font-bold">Cripto</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="space-y-2 pt-1">
+                <button type="button" onclick="payQuotationDeposit()" class="btn-neon w-full py-3 justify-center text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 shadow-[0_0_25px_rgba(16,185,129,0.4)] flex items-center gap-2">
+                  <span>💳</span> Pagar Anticipo 50% (<span id="btnPayQuoteAmountDisplay">$975 USD</span>)
+                </button>
+                <button type="submit" id="btnSubmitQuote" class="btn-ghost-neon w-full py-2.5 justify-center text-xs font-semibold text-slate-300 border-purple-500/40 hover:text-white flex items-center gap-1.5">
+                  <span>🚀</span> Solo Solicitar Propuesta Técnica
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -833,7 +880,8 @@
             <option value="designer">🎨 Diseñador UI/UX</option>
             <option value="manager">📊 Project Manager</option>
             <option value="employee">👥 Colaborador</option>
-            <option value="public">🌐 Vista Portafolio Cliente</option>
+            <option value="client">👤 Cliente / Solicitante de Soporte</option>
+            <option value="public">🌐 Vista Portafolio Visitante</option>
           </select>
         </div>
 
@@ -1169,6 +1217,7 @@
                   <option value="designer">🎨 Diseñador UI/UX & Frontend</option>
                   <option value="manager">📊 Project Manager & Scrum Master</option>
                   <option value="employee">👥 Colaborador / Empleado</option>
+                  <option value="client">👤 Cliente / Soporte</option>
                   <option value="admin">👑 Administrador</option>
                 </select>
               </div>
@@ -1657,7 +1706,7 @@
               <!-- Populated dynamically via JS -->
             </select>
           </div>
-          <div>
+          <div id="ticketAssigneeContainer">
             <label class="block text-xs font-semibold text-purple-200 mb-1">Asignar a Desarrollador</label>
             <select id="ticketAssigneeSelect" class="cyber-input text-sm">
               <option value="">-- Sin Asignar (Abierto a Devs) --</option>
