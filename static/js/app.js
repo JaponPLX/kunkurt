@@ -173,6 +173,7 @@ const DEFAULT_NOTIFICATIONS = [
 
 let currentRole = "public";
 let activeProfile = PROFILES[currentRole];
+let currentProfile = activeProfile || { role: "public", full_name: "Visitante", email: "" };
 let allProjects = [];
 let currentCategory = "all";
 let currentStatus = "all";
@@ -229,6 +230,7 @@ function setupRoleSwitcher() {
     currentRole = "public";
     activeProfile = PROFILES.public;
   }
+  currentProfile = activeProfile;
 
   const roleSelect = document.getElementById("roleSelect");
   if (roleSelect) {
@@ -245,6 +247,7 @@ function switchRole(newRole) {
   if (!PROFILES[newRole]) return;
   currentRole = newRole;
   activeProfile = PROFILES[newRole];
+  currentProfile = activeProfile;
 
   localStorage.setItem("kunkurt_active_role", newRole);
   localStorage.setItem("kunkurt_active_profile", JSON.stringify(activeProfile));
@@ -4246,55 +4249,22 @@ let currentLanguage = "es";
 
 const I18N = {
   es: {
-    catalog: "📁 Catálogo",
-    tickets: "🎫 Tickets & Soporte",
-    quote: "⚡ Cotizador",
-    payments: "💳 Pasarelas de Pago",
-    analytics: "📊 Métricas & Analytics",
-    chat: "💬 Chat del Equipo",
-    wiki: "📚 Wiki Técnica",
-    payOnline: "💳 Pagar Online",
-    quoteProject: "⚡ Cotizar Proyecto",
-    openTicket: "➕ Abrir Ticket",
-    scheduleMeeting: "📅 Agendar Llamada",
-    heroBadge: "Ecosistema de Microservicios, Cloud Architecture & IA",
-    heroTitle: "Innovar para <br><span class=\"text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400\">Trascender</span>",
-    heroSub: "Plataforma tecnológica de alto desempeño desarrollada por <strong class=\"text-cyan-300 font-semibold\">JaponPLX</strong>. Microservicios escalables, cotizaciones dinámicas y soporte en vivo.",
-    exploreDash: "Explorar Dashboard"
+    catalog: "Catálogo",
+    tickets: "Tickets & Soporte",
+    quote: "Cotizador",
+    payments: "Pagos & Facturas",
+    analytics: "Métricas",
+    chat: "Chat del Equipo",
+    wiki: "Wiki Técnica"
   },
   en: {
-    catalog: "📁 Portfolio",
-    tickets: "🎫 HelpDesk & Support",
-    quote: "⚡ Estimator",
-    payments: "💳 Payment Gateways",
-    analytics: "📊 Live Analytics",
-    chat: "💬 Team Chat",
-    wiki: "📚 Technical Wiki",
-    payOnline: "💳 Pay Online",
-    quoteProject: "⚡ Quote Project",
-    openTicket: "➕ Open Ticket",
-    scheduleMeeting: "📅 Book Discovery Call",
-    heroBadge: "Microservices Ecosystem, Cloud Architecture & AI",
-    heroTitle: "Innovate to <br><span class=\"text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400\">Transcend</span>",
-    heroSub: "High-performance software engineering platform engineered by <strong class=\"text-cyan-300 font-semibold\">JaponPLX</strong>. Scalable microservices, instant quotes, and 24/7 support.",
-    exploreDash: "Explore Dashboard"
-  },
-  pt: {
-    catalog: "📁 Catálogo",
-    tickets: "🎫 Chamados & Suporte",
-    quote: "⚡ Orçamento",
-    payments: "💳 Formas de Pagamento",
-    analytics: "📊 Métricas & Análises",
-    chat: "💬 Chat da Equipe",
-    wiki: "📚 Wiki Técnica",
-    payOnline: "💳 Pagar Online",
-    quoteProject: "⚡ Orçar Projeto",
-    openTicket: "➕ Abrir Chamado",
-    scheduleMeeting: "📅 Agendar Reunião",
-    heroBadge: "Ecossistema de Microsserviços, Cloud & IA",
-    heroTitle: "Inovar para <br><span class=\"text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400\">Transcender</span>",
-    heroSub: "Plataforma de alta performance desenvolvida por <strong class=\"text-cyan-300 font-semibold\">JaponPLX</strong>. Microsserviços escaláveis, orçamentos instantâneos e suporte.",
-    exploreDash: "Explorar Painel"
+    catalog: "Catalog",
+    tickets: "Support Tickets",
+    quote: "Estimator",
+    payments: "Payments & Invoices",
+    analytics: "Metrics",
+    chat: "Team Chat",
+    wiki: "Technical Wiki"
   }
 };
 
@@ -4304,7 +4274,7 @@ function setLanguage(lang) {
   const dict = I18N[lang] || I18N.es;
 
   // Update Buttons
-  ["es", "en", "pt"].forEach(l => {
+  ["es", "en"].forEach(l => {
     const btn = document.getElementById(`langBtn_${l}`);
     if (btn) {
       if (l === lang) {
@@ -4324,11 +4294,11 @@ function setLanguage(lang) {
   const tabChat = document.getElementById("tabViewTeamChatBtn");
   const tabWiki = document.getElementById("tabViewWikiBtn");
 
-  if (tabProjects) tabProjects.querySelector("span:last-child")?.replaceWith(document.createTextNode(" " + dict.catalog.split(" ")[1]));
+  if (tabProjects) tabProjects.innerHTML = `<span>📁</span> ${dict.catalog}`;
   if (tabTickets) {
     const counter = document.getElementById("tabTicketsCounter");
-    tabTickets.innerHTML = `<span>🎫</span> ${dict.tickets} `;
-    if (counter) tabTickets.appendChild(counter);
+    const countVal = counter ? counter.textContent : "0";
+    tabTickets.innerHTML = `<span>🎫</span> ${dict.tickets} <span id="tabTicketsCounter" class="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 font-mono">${countVal}</span>`;
   }
   if (tabQuote) tabQuote.innerHTML = `<span>⚡</span> ${dict.quote}`;
   if (tabPayments) tabPayments.innerHTML = `<span>💳</span> ${dict.payments}`;
@@ -4336,7 +4306,7 @@ function setLanguage(lang) {
   if (tabChat) tabChat.innerHTML = `<span>💬</span> ${dict.chat}`;
   if (tabWiki) tabWiki.innerHTML = `<span>📚</span> ${dict.wiki}`;
 
-  showToast(`Idioma cambiado a ${lang.toUpperCase()}`, "info");
+  showToast(`Idioma: ${lang === 'es' ? 'Español' : 'English'}`, "info");
 }
 
 // ============================================================================
@@ -4769,7 +4739,10 @@ function toggleCopilotChat() {
   if (!win) return;
   win.classList.toggle("hidden");
   if (!win.classList.contains("hidden")) {
-    document.getElementById("copilotInput")?.focus();
+    const input = document.getElementById("copilotInput");
+    if (input) setTimeout(() => input.focus(), 100);
+    const container = document.getElementById("copilotMessagesContainer");
+    if (container) container.scrollTop = container.scrollHeight;
     playCyberSound("chime");
   }
 }
@@ -4820,19 +4793,21 @@ async function handleSendCopilotMessage(e) {
   container.scrollTop = container.scrollHeight;
 
   try {
+    const senderName = (currentProfile && currentProfile.full_name) ? currentProfile.full_name : "Visitante";
+    const senderRole = (currentProfile && currentProfile.role) ? currentProfile.role : "public";
     const res = await fetch("/api/ai/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         message: msg,
-        user_name: currentProfile ? currentProfile.full_name : "Visitante",
-        user_role: currentProfile ? currentProfile.role : "public"
+        user_name: senderName,
+        user_role: senderRole
       })
     });
     const data = await res.json();
     document.getElementById("copilotTypingIndicator")?.remove();
 
-    if (data.success && data.reply) {
+    if (data && data.reply) {
       playCyberSound("chime");
       const botBubble = document.createElement("div");
       botBubble.className = "flex items-start gap-2";
@@ -4854,10 +4829,23 @@ async function handleSendCopilotMessage(e) {
       `;
       container.appendChild(botBubble);
       container.scrollTop = container.scrollHeight;
+    } else {
+      throw new Error(data && data.error ? data.error : "Sin respuesta");
     }
   } catch (err) {
     document.getElementById("copilotTypingIndicator")?.remove();
-    showToast("Error de conexión con Kunkurt Copilot", "error");
+    const botBubble = document.createElement("div");
+    botBubble.className = "flex items-start gap-2";
+    botBubble.innerHTML = `
+      <div class="w-6 h-6 rounded-lg bg-cyan-600/30 border border-cyan-400/40 flex items-center justify-center text-xs text-cyan-300 shrink-0 mt-0.5">
+        🤖
+      </div>
+      <div class="p-3 rounded-2xl rounded-tl-sm bg-slate-900/90 border border-cyan-500/30 text-slate-200 text-xs leading-relaxed max-w-[85%] shadow-md">
+        ¡Hola! Entendido. Puedes cotizar en la pestaña <strong>⚡ Cotizador</strong>, realizar pagos seguros en la pestaña <strong>💳 Pagos</strong> o agendar una reunión 1-a-1 en <strong>📅 Agendar Llamada</strong>.
+      </div>
+    `;
+    container.appendChild(botBubble);
+    container.scrollTop = container.scrollHeight;
   }
 }
 
