@@ -328,6 +328,16 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
                 self.send_error(404, "File Not Found")
                 return
 
+        # API: Health Check & Keep-Alive Ping
+        if path == "/api/health" or path == "/health":
+            self.send_json({
+                "status": "healthy",
+                "service": "kunkurt-devs",
+                "uptime": "active",
+                "timestamp": datetime.now().isoformat()
+            })
+            return
+
         # API: Network & Public Access Info
         if path == "/api/network-info":
             lan_ip = get_lan_ip()

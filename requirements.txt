@@ -1,0 +1,2 @@
+# Kunkurt Devs utiliza exclusivamente la librería estándar de Python 3.
+# No requiere instalar paquetes externos vía pip.

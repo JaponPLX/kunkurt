@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: kunkurt-devs
+    runtime: python
+    buildCommand: ""
+    startCommand: python3 server.py
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: HOST
+        value: 0.0.0.0

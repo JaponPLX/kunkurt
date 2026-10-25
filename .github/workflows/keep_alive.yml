@@ -1,0 +1,22 @@
+name: Keep Alive 24/7
+
+on:
+  schedule:
+    # Se ejecuta cada 12 minutos para evitar que el servidor gratuito se duerma
+    - cron: '*/12 * * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Kunkurt Web Service
+        run: |
+          # Si tienes configurado el secret APP_URL, lo usa. Si no, usa el dominio por defecto de Render
+          TARGET_URL="${{ secrets.APP_URL }}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://kunkurt.onrender.com"
+          fi
+          echo "Haciendo ping a: $TARGET_URL/api/health"
+          curl -s -f "$TARGET_URL/api/health" || curl -s "$TARGET_URL" || true
+          echo "Ping completado con éxito."
