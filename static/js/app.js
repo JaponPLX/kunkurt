@@ -2998,6 +2998,9 @@ function calculateQuotation() {
     btnPayDisplay.textContent = `$${deposit50.toLocaleString("en-US")} USD`;
   }
 
+  const projectTypeName = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white")?.textContent.trim() : "Solución de Software";
+  updateWhatsAppContext(projectTypeName || "Solución Web", totalCost);
+
   return { totalCost, totalWeeks };
 }
 
@@ -4199,6 +4202,591 @@ function closeToolsModal() {
   modal.classList.add("hidden");
   document.body.style.overflow = "auto";
 }
+
+// ============================================================================
+// 1. SELECTOR MULTILENGUAJE INSTANTÁNEO (ES / EN / PT)
+// ============================================================================
+let currentLanguage = "es";
+
+const I18N = {
+  es: {
+    catalog: "📁 Catálogo",
+    tickets: "🎫 Tickets & Soporte",
+    quote: "⚡ Cotizador",
+    payments: "💳 Pasarelas de Pago",
+    analytics: "📊 Métricas & Analytics",
+    chat: "💬 Chat del Equipo",
+    wiki: "📚 Wiki Técnica",
+    payOnline: "💳 Pagar Online",
+    quoteProject: "⚡ Cotizar Proyecto",
+    openTicket: "➕ Abrir Ticket",
+    scheduleMeeting: "📅 Agendar Llamada",
+    heroBadge: "Ecosistema de Microservicios, Cloud Architecture & IA",
+    heroTitle: "Innovar para <br><span class=\"text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400\">Trascender</span>",
+    heroSub: "Plataforma tecnológica de alto desempeño desarrollada por <strong class=\"text-cyan-300 font-semibold\">JaponPLX</strong>. Microservicios escalables, cotizaciones dinámicas y soporte en vivo.",
+    exploreDash: "Explorar Dashboard"
+  },
+  en: {
+    catalog: "📁 Portfolio",
+    tickets: "🎫 HelpDesk & Support",
+    quote: "⚡ Estimator",
+    payments: "💳 Payment Gateways",
+    analytics: "📊 Live Analytics",
+    chat: "💬 Team Chat",
+    wiki: "📚 Technical Wiki",
+    payOnline: "💳 Pay Online",
+    quoteProject: "⚡ Quote Project",
+    openTicket: "➕ Open Ticket",
+    scheduleMeeting: "📅 Book Discovery Call",
+    heroBadge: "Microservices Ecosystem, Cloud Architecture & AI",
+    heroTitle: "Innovate to <br><span class=\"text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400\">Transcend</span>",
+    heroSub: "High-performance software engineering platform engineered by <strong class=\"text-cyan-300 font-semibold\">JaponPLX</strong>. Scalable microservices, instant quotes, and 24/7 support.",
+    exploreDash: "Explore Dashboard"
+  },
+  pt: {
+    catalog: "📁 Catálogo",
+    tickets: "🎫 Chamados & Suporte",
+    quote: "⚡ Orçamento",
+    payments: "💳 Formas de Pagamento",
+    analytics: "📊 Métricas & Análises",
+    chat: "💬 Chat da Equipe",
+    wiki: "📚 Wiki Técnica",
+    payOnline: "💳 Pagar Online",
+    quoteProject: "⚡ Orçar Projeto",
+    openTicket: "➕ Abrir Chamado",
+    scheduleMeeting: "📅 Agendar Reunião",
+    heroBadge: "Ecossistema de Microsserviços, Cloud & IA",
+    heroTitle: "Inovar para <br><span class=\"text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-cyan-400\">Transcender</span>",
+    heroSub: "Plataforma de alta performance desenvolvida por <strong class=\"text-cyan-300 font-semibold\">JaponPLX</strong>. Microsserviços escaláveis, orçamentos instantâneos e suporte.",
+    exploreDash: "Explorar Painel"
+  }
+};
+
+function setLanguage(lang) {
+  playCyberSound("click");
+  currentLanguage = lang;
+  const dict = I18N[lang] || I18N.es;
+
+  // Update Buttons
+  ["es", "en", "pt"].forEach(l => {
+    const btn = document.getElementById(`langBtn_${l}`);
+    if (btn) {
+      if (l === lang) {
+        btn.className = "px-2 py-0.5 rounded-lg bg-cyan-500 text-black font-extrabold transition-all";
+      } else {
+        btn.className = "px-2 py-0.5 rounded-lg text-slate-300 hover:text-white transition-all";
+      }
+    }
+  });
+
+  // Update Nav tabs
+  const tabProjects = document.getElementById("tabViewProjectsBtn");
+  const tabTickets = document.getElementById("tabViewTicketsBtn");
+  const tabQuote = document.getElementById("tabViewQuoteBtn");
+  const tabPayments = document.getElementById("tabViewPaymentsBtn");
+  const tabAnalytics = document.getElementById("tabViewAnalyticsBtn");
+  const tabChat = document.getElementById("tabViewTeamChatBtn");
+  const tabWiki = document.getElementById("tabViewWikiBtn");
+
+  if (tabProjects) tabProjects.querySelector("span:last-child")?.replaceWith(document.createTextNode(" " + dict.catalog.split(" ")[1]));
+  if (tabTickets) {
+    const counter = document.getElementById("tabTicketsCounter");
+    tabTickets.innerHTML = `<span>🎫</span> ${dict.tickets} `;
+    if (counter) tabTickets.appendChild(counter);
+  }
+  if (tabQuote) tabQuote.innerHTML = `<span>⚡</span> ${dict.quote}`;
+  if (tabPayments) tabPayments.innerHTML = `<span>💳</span> ${dict.payments}`;
+  if (tabAnalytics) tabAnalytics.innerHTML = `<span>📊</span> ${dict.analytics}`;
+  if (tabChat) tabChat.innerHTML = `<span>💬</span> ${dict.chat}`;
+  if (tabWiki) tabWiki.innerHTML = `<span>📚</span> ${dict.wiki}`;
+
+  showToast(`Idioma cambiado a ${lang.toUpperCase()}`, "info");
+}
+
+// ============================================================================
+// 2. RADAR DE ESTADO DE SERVICIOS & TELEMETRÍA SLA
+// ============================================================================
+function openStatusModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("statusModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  pingSystemStatus();
+}
+
+function closeStatusModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("statusModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  document.body.style.overflow = "auto";
+}
+
+async function pingSystemStatus() {
+  playCyberSound("beep");
+  try {
+    const start = performance.now();
+    const res = await fetch("/api/system/status");
+    const data = await res.json();
+    const pingMs = Math.round(performance.now() - start);
+
+    const list = document.getElementById("statusServicesList");
+    if (list && data.services) {
+      list.innerHTML = data.services.map(s => `
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700/40 flex items-center justify-between">
+          <span class="text-slate-200 font-medium">${escapeHTML(s.name)}</span>
+          <div class="flex items-center gap-3">
+            <span class="text-[10px] font-mono text-cyan-400">${s.latency_ms || pingMs}ms</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-500/30 font-bold">
+              ● Operativo (${s.sla})
+            </span>
+          </div>
+        </div>
+      `).join("");
+    }
+    showToast(`Radar de servicios actualizado • Latencia: ${pingMs}ms`, "success");
+  } catch (err) {
+    showToast("Error conectando con radar de servicios", "error");
+  }
+}
+
+// ============================================================================
+// 3. AGENDADOR DE DISCOVERY CALLS (GOOGLE MEET)
+// ============================================================================
+function openMeetingModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("meetingModal");
+  if (!modal) return;
+
+  const formBox = document.getElementById("meetingFormContainer");
+  const successBox = document.getElementById("meetingSuccessContainer");
+  if (formBox) formBox.classList.remove("hidden");
+  if (successBox) successBox.classList.add("hidden");
+
+  // Pre-fill date to tomorrow
+  const dateInput = document.getElementById("meetDate");
+  if (dateInput) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateInput.value = tomorrow.toISOString().split("T")[0];
+    dateInput.min = new Date().toISOString().split("T")[0];
+  }
+
+  // Pre-fill user data
+  const nameInput = document.getElementById("meetClientName");
+  const emailInput = document.getElementById("meetClientEmail");
+  if (nameInput && !nameInput.value && currentProfile && currentProfile.full_name) {
+    nameInput.value = currentProfile.full_name;
+  }
+  if (emailInput && !emailInput.value && currentProfile && currentProfile.email) {
+    emailInput.value = currentProfile.email;
+  }
+
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeMeetingModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("meetingModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  document.body.style.overflow = "auto";
+}
+
+async function handleScheduleMeeting(e) {
+  e.preventDefault();
+  playCyberSound("click");
+
+  const name = document.getElementById("meetClientName")?.value.trim() || "";
+  const email = document.getElementById("meetClientEmail")?.value.trim() || "";
+  const company = document.getElementById("meetClientCompany")?.value.trim() || "";
+  const timezone = document.getElementById("meetTimezone")?.value || "America/Bogota";
+  const date = document.getElementById("meetDate")?.value || "";
+  const time = document.getElementById("meetTime")?.value || "";
+  const topic = document.getElementById("meetTopic")?.value.trim() || "Discovery Call";
+  const notes = document.getElementById("meetNotes")?.value.trim() || "";
+  const btn = document.getElementById("btnSubmitMeeting");
+
+  if (!name || !email || !date || !time) {
+    showToast("Por favor completa todos los campos requeridos.", "error");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "<span>⏳</span> Generando sala de Google Meet...";
+  }
+
+  try {
+    const res = await fetch("/api/meetings/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: name,
+        client_email: email,
+        client_company: company,
+        meeting_date: date,
+        meeting_time: time,
+        timezone: timezone,
+        topic: topic,
+        notes: notes
+      })
+    });
+
+    const data = await res.json();
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = "<span>🚀</span> Confirmar Cita & Generar Google Meet";
+    }
+
+    if (data.success) {
+      playCyberSound("chime");
+      triggerCyberConfetti();
+      showNotification(`🎉 ¡Reunión agendada para el ${date} a las ${time}! Invitación enviada.`);
+
+      const formBox = document.getElementById("meetingFormContainer");
+      const successBox = document.getElementById("meetingSuccessContainer");
+      if (formBox) formBox.classList.add("hidden");
+      if (successBox) successBox.classList.remove("hidden");
+
+      const dtEl = document.getElementById("meetConfirmDateTime");
+      const topicEl = document.getElementById("meetConfirmTopic");
+      const linkEl = document.getElementById("meetConfirmLink");
+      const calBtn = document.getElementById("meetCalendarBtn");
+
+      if (dtEl) dtEl.textContent = `${date} a las ${time} (${timezone})`;
+      if (topicEl) topicEl.textContent = topic;
+      if (linkEl) {
+        linkEl.href = data.meeting.meet_link;
+        linkEl.textContent = data.meeting.meet_link;
+      }
+      if (calBtn) {
+        const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Discovery Call Kunkurt: ' + topic)}&dates=${date.replace(/-/g, '')}T140000Z/${date.replace(/-/g, '')}T143000Z&details=${encodeURIComponent('Enlace de Google Meet: ' + data.meeting.meet_link + '\n\nOrganizado por Alejandro (JaponPLX) - Kunkurt Devs')}&location=${encodeURIComponent(data.meeting.meet_link)}`;
+        calBtn.href = calUrl;
+      }
+    } else {
+      showToast(data.error || "No se pudo agendar la reunión.", "error");
+      playCyberSound("error");
+    }
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = "<span>🚀</span> Confirmar Cita & Generar Google Meet";
+    }
+    showToast("Error conectando con el servidor: " + err.message, "error");
+  }
+}
+
+// ============================================================================
+// 4. GENERADOR OFICIAL DE FACTURA PROFORMA & CONTRATO PDF
+// ============================================================================
+let activeDocType = "invoice";
+
+function openInvoiceModal(opts = {}) {
+  playCyberSound("click");
+  const modal = document.getElementById("invoiceModal");
+  if (!modal) return;
+
+  renderInvoiceOrContract();
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeInvoiceModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("invoiceModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+  document.body.style.overflow = "auto";
+}
+
+function toggleDocType(type) {
+  playCyberSound("click");
+  activeDocType = type;
+  const btnInv = document.getElementById("docToggleInvoiceBtn");
+  const btnCtr = document.getElementById("docToggleContractBtn");
+
+  if (type === "invoice") {
+    if (btnInv) btnInv.className = "py-2 rounded-lg font-bold transition-all bg-cyan-600 text-white shadow";
+    if (btnCtr) btnCtr.className = "py-2 rounded-lg font-bold transition-all text-slate-400 hover:text-white";
+  } else {
+    if (btnInv) btnInv.className = "py-2 rounded-lg font-bold transition-all text-slate-400 hover:text-white";
+    if (btnCtr) btnCtr.className = "py-2 rounded-lg font-bold transition-all bg-cyan-600 text-white shadow";
+  }
+
+  renderInvoiceOrContract();
+}
+
+function renderInvoiceOrContract() {
+  const box = document.getElementById("printableDocumentBox");
+  if (!box) return;
+
+  const clientName = document.getElementById("quoteClientName")?.value.trim() || (currentProfile ? currentProfile.full_name : "Cliente Corporativo");
+  const clientEmail = document.getElementById("quoteClientEmail")?.value.trim() || (currentProfile ? currentProfile.email : "contacto@empresa.com");
+  const clientCompany = document.getElementById("quoteClientCompany")?.value.trim() || "Nexus Tech Latam";
+
+  const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
+  const projectType = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white").textContent.trim() : "Plataforma de Software Full-Stack";
+
+  const { totalCost, totalWeeks } = calculateQuotation();
+  const deposit = Math.round(totalCost * 0.5);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" });
+  const docCode = `INV-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const ctrCode = `CTR-KKT-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  if (activeDocType === "invoice") {
+    box.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom: 2px solid #0891b2; padding-bottom: 15px;">
+        <div>
+          <h1 style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">KUNKURT DEVS</h1>
+          <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Ingeniería de Software, Microservicios & Cloud Architecture</p>
+          <p style="font-size: 10px; color: #64748b; margin: 2px 0 0 0;">NIT / Tax ID: 901.482.091-8 • contacto: alejandrobelno964@gmail.com</p>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-size: 11px; font-weight: bold; background: #cffafe; color: #0891b2; padding: 3px 8px; border-radius: 6px; font-family: monospace;">FACTURA PROFORMA</span>
+          <div style="font-size: 12px; font-weight: bold; margin-top: 5px; font-family: monospace;">Nº ${docCode}</div>
+          <div style="font-size: 10px; color: #64748b;">Fecha: ${dateStr}</div>
+        </div>
+      </div>
+
+      <!-- Parties -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+        <div style="padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <div style="font-size: 9px; font-weight: bold; color: #64748b; text-transform: uppercase;">EMISOR / PRESTADOR</div>
+          <div style="font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 2px;">Kunkurt Devs Studio</div>
+          <div style="font-size: 10px; color: #475569;">Director Técnico: Alejandro (JaponPLX)</div>
+          <div style="font-size: 10px; color: #475569;">Email: alejandrobelno964@gmail.com</div>
+        </div>
+        <div style="padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <div style="font-size: 9px; font-weight: bold; color: #64748b; text-transform: uppercase;">CLIENTE / RECEPTOR</div>
+          <div style="font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 2px;">${escapeHTML(clientName)}</div>
+          <div style="font-size: 10px; color: #475569;">Empresa: ${escapeHTML(clientCompany)}</div>
+          <div style="font-size: 10px; color: #475569;">Email: ${escapeHTML(clientEmail)}</div>
+        </div>
+      </div>
+
+      <!-- Items Table -->
+      <table style="width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px;">
+        <thead>
+          <tr style="background: #0f172a; color: #ffffff; text-align: left;">
+            <th style="padding: 8px 10px; border-radius: 6px 0 0 0;">Concepto / Entregable</th>
+            <th style="padding: 8px 10px; text-align: center;">Plazo</th>
+            <th style="padding: 8px 10px; text-align: right;">Total USD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px;">
+              <strong>${escapeHTML(projectType)}</strong>
+              <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Diseño de arquitectura, microservicios, seguridad RBAC, pruebas de rendimiento e integración continua.</div>
+            </td>
+            <td style="padding: 10px; text-align: center; color: #475569;">${totalWeeks} semanas</td>
+            <td style="padding: 10px; text-align: right; font-weight: bold;">$${totalCost.toLocaleString("en-US", {minimumFractionDigits: 2})} USD</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Totals & Payment Breakdown -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-top: 15px;">
+        <div style="max-w: 60%; font-size: 10px; color: #64748b;">
+          <strong>Términos de Pago:</strong>
+          <div>• Anticipo para inicio de sprints: <strong>$${deposit.toLocaleString("en-US", {minimumFractionDigits: 2})} USD (50%)</strong></div>
+          <div>• Saldo contraentrega y aprobación: <strong>$${(totalCost - deposit).toLocaleString("en-US", {minimumFractionDigits: 2})} USD (50%)</strong></div>
+          <div>• Pasarelas autorizadas: Stripe, PayPal, Mercado Pago (PSE), Apple Pay y Binance Pay USDT.</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 11px; color: #64748b;">Subtotal: $${totalCost.toLocaleString("en-US", {minimumFractionDigits: 2})} USD</div>
+          <div style="font-size: 11px; color: #64748b;">Impuestos / Cero retención ext.: $0.00 USD</div>
+          <div style="font-size: 18px; font-weight: 900; color: #0891b2; margin-top: 4px;">TOTAL: $${totalCost.toLocaleString("en-US", {minimumFractionDigits: 2})} USD</div>
+        </div>
+      </div>
+
+      <!-- Signature & Stamp -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-top: 25px;">
+        <div>
+          <div style="font-size: 10px; font-weight: bold; color: #059669;">✓ DOCUMENTO VERIFICADO DIGITALMENTE</div>
+          <div style="font-size: 9px; color: #94a3b8; font-family: monospace;">Firma Hash: SHA256-${docCode}</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="border-bottom: 1px solid #0f172a; width: 140px; margin-bottom: 4px;"></div>
+          <div style="font-size: 10px; font-weight: bold;">Alejandro (JaponPLX)</div>
+          <div style="font-size: 9px; color: #64748b;">Director General • Kunkurt Devs</div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Contract Mode
+    box.innerHTML = `
+      <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; text-align: center;">
+        <h1 style="font-size: 18px; font-weight: 900; margin: 0; text-transform: uppercase;">CONTRATO DE PRESTACIÓN DE SERVICIOS DE DESARROLLO DE SOFTWARE & SLA</h1>
+        <div style="font-size: 10px; color: #64748b; font-family: monospace; margin-top: 3px;">CÓDIGO OFICIAL: ${ctrCode}</div>
+      </div>
+
+      <div style="font-size: 11px; line-height: 1.6; color: #334155; margin-top: 15px; space-y: 10px;">
+        <p>Conste por el presente documento el contrato de desarrollo de software celebrado entre <strong>Kunkurt Devs Studio</strong>, representado por su Director General <strong>Alejandro (JaponPLX)</strong>, y por la otra parte el contratante <strong>${escapeHTML(clientName)}</strong> (${escapeHTML(clientCompany)}).</p>
+
+        <h3 style="font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 12px;">CLÁUSULA PRIMERA: OBJETO DEL CONTRATO</h3>
+        <p>El prestador se compromete a diseñar, programar e implementar para el cliente la solución tecnológica denominada <strong>${escapeHTML(projectType)}</strong>, bajo los estándares de arquitectura cloud, seguridad informática y código limpio especificados en la propuesta técnica.</p>
+
+        <h3 style="font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 12px;">CLÁUSULA SEGUNDA: INVERSIÓN Y FORMA DE PAGO</h3>
+        <p>El precio pactado es de <strong>$${totalCost.toLocaleString("en-US", {minimumFractionDigits: 2})} USD</strong>, el cual será desembolsado en dos pagos: (a) 50% equivalente a $${deposit.toLocaleString("en-US", {minimumFractionDigits: 2})} USD al momento de firma y asignación de ingenieros; y (b) 50% al finalizar la fase de control de calidad y despliegue.</p>
+
+        <h3 style="font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 12px;">CLÁUSULA TERCERA: PROPIEDAD INTELECTUAL & CONFIDENCIALIDAD (NDA)</h3>
+        <p>Al completarse la liquidación total, el cliente adquiere el 100% de la propiedad intelectual, código fuente, repositorios y derechos de explotación del software desarrollado. Ambas partes se comprometen a resguardar la confidencialidad estricta de la información compartida.</p>
+
+        <h3 style="font-size: 12px; font-weight: bold; color: #0f172a; margin-top: 12px;">CLÁUSULA CUARTA: GARANTÍA & SLA (99.9%)</h3>
+        <p>Kunkurt Devs otorga un periodo de garantía técnica de 90 días posteriores al despliegue para resolución inmediata de cualquier bug o incidencia sin costo adicional.</p>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+        <div style="text-align: center;">
+          <div style="border-bottom: 1px solid #0f172a; width: 160px; margin: 0 auto 5px auto;"></div>
+          <div style="font-size: 10px; font-weight: bold;">Alejandro (JaponPLX)</div>
+          <div style="font-size: 9px; color: #64748b;">Por: Kunkurt Devs Studio</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="border-bottom: 1px solid #0f172a; width: 160px; margin: 0 auto 5px auto;"></div>
+          <div style="font-size: 10px; font-weight: bold;">${escapeHTML(clientName)}</div>
+          <div style="font-size: 9px; color: #64748b;">Por: ${escapeHTML(clientCompany)} (Cliente)</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function printInvoiceDocument() {
+  playCyberSound("click");
+  window.print();
+}
+
+// ============================================================================
+// 5. ASISTENTE DE IA 24/7 (KUNKURT CYBER-COPILOT CHATBOT)
+// ============================================================================
+function toggleCopilotChat() {
+  playCyberSound("click");
+  const win = document.getElementById("copilotChatWindow");
+  if (!win) return;
+  win.classList.toggle("hidden");
+  if (!win.classList.contains("hidden")) {
+    document.getElementById("copilotInput")?.focus();
+    playCyberSound("chime");
+  }
+}
+
+function sendQuickCopilotPrompt(text) {
+  const input = document.getElementById("copilotInput");
+  if (input) input.value = text;
+  handleSendCopilotMessage(new Event("submit"));
+}
+
+async function handleSendCopilotMessage(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById("copilotInput");
+  const container = document.getElementById("copilotMessagesContainer");
+  const msg = input ? input.value.trim() : "";
+
+  if (!msg) return;
+  input.value = "";
+  playCyberSound("click");
+
+  // Append user bubble
+  const userBubble = document.createElement("div");
+  userBubble.className = "flex items-start justify-end gap-2";
+  userBubble.innerHTML = `
+    <div class="p-3 rounded-2xl rounded-tr-sm bg-gradient-to-r from-cyan-600 to-blue-600 text-white text-xs max-w-[85%] leading-relaxed shadow-md">
+      ${escapeHTML(msg)}
+    </div>
+  `;
+  container.appendChild(userBubble);
+  container.scrollTop = container.scrollHeight;
+
+  // Append typing indicator
+  const typingBubble = document.createElement("div");
+  typingBubble.id = "copilotTypingIndicator";
+  typingBubble.className = "flex items-start gap-2";
+  typingBubble.innerHTML = `
+    <div class="w-6 h-6 rounded-lg bg-cyan-600/30 border border-cyan-400/40 flex items-center justify-center text-xs text-cyan-300 shrink-0 mt-0.5">
+      🤖
+    </div>
+    <div class="p-2.5 rounded-2xl rounded-tl-sm bg-slate-900/80 border border-slate-700/50 text-slate-400 text-xs flex items-center gap-1.5 font-mono">
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce"></span>
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style="animation-delay: 0.2s"></span>
+      <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce" style="animation-delay: 0.4s"></span>
+      <span class="ml-1 text-[10px]">Analizando arquitectura...</span>
+    </div>
+  `;
+  container.appendChild(typingBubble);
+  container.scrollTop = container.scrollHeight;
+
+  try {
+    const res = await fetch("/api/ai/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: msg,
+        user_name: currentProfile ? currentProfile.full_name : "Visitante",
+        user_role: currentProfile ? currentProfile.role : "public"
+      })
+    });
+    const data = await res.json();
+    document.getElementById("copilotTypingIndicator")?.remove();
+
+    if (data.success && data.reply) {
+      playCyberSound("chime");
+      const botBubble = document.createElement("div");
+      botBubble.className = "flex items-start gap-2";
+      
+      // Parse markdown bold and bullets
+      let formattedReply = data.reply
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n• /g, '<br>• ')
+        .replace(/\n\n/g, '<br><br>');
+
+      botBubble.innerHTML = `
+        <div class="w-6 h-6 rounded-lg bg-cyan-600/30 border border-cyan-400/40 flex items-center justify-center text-xs text-cyan-300 shrink-0 mt-0.5">
+          🤖
+        </div>
+        <div class="p-3 rounded-2xl rounded-tl-sm bg-slate-900/90 border border-slate-700/50 text-slate-200 text-xs leading-relaxed max-w-[85%] shadow-md">
+          ${formattedReply}
+        </div>
+      `;
+      container.appendChild(botBubble);
+      container.scrollTop = container.scrollHeight;
+    }
+  } catch (err) {
+    document.getElementById("copilotTypingIndicator")?.remove();
+    showToast("Error de conexión con Kunkurt Copilot", "error");
+  }
+}
+
+// Update WhatsApp button with dynamic quotation data
+function updateWhatsAppContext(projectType, cost) {
+  const btn = document.getElementById("floatingWhatsAppBtn");
+  if (!btn) return;
+  const text = encodeURIComponent(`Hola Alejandro, estoy cotizando una ${projectType} por $${cost} USD en Kunkurt Devs y me gustaría coordinar los detalles.`);
+  btn.href = `https://wa.me/573100000000?text=${text}`;
+}
+
+// Window Exports for new features
+window.setLanguage = setLanguage;
+window.openStatusModal = openStatusModal;
+window.closeStatusModal = closeStatusModal;
+window.pingSystemStatus = pingSystemStatus;
+window.openMeetingModal = openMeetingModal;
+window.closeMeetingModal = closeMeetingModal;
+window.handleScheduleMeeting = handleScheduleMeeting;
+window.openInvoiceModal = openInvoiceModal;
+window.closeInvoiceModal = closeInvoiceModal;
+window.toggleDocType = toggleDocType;
+window.printInvoiceDocument = printInvoiceDocument;
+window.toggleCopilotChat = toggleCopilotChat;
+window.sendQuickCopilotPrompt = sendQuickCopilotPrompt;
+window.handleSendCopilotMessage = handleSendCopilotMessage;
 
 
 

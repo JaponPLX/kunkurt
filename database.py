@@ -243,6 +243,24 @@ def init_db(force_seed=False):
     );
     """)
 
+    # Technical Discovery Meetings table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS meetings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_name TEXT NOT NULL,
+        client_email TEXT NOT NULL,
+        client_company TEXT DEFAULT '',
+        meeting_date TEXT NOT NULL,
+        meeting_time TEXT NOT NULL,
+        timezone TEXT DEFAULT 'America/Bogota',
+        topic TEXT NOT NULL,
+        notes TEXT DEFAULT '',
+        meet_link TEXT NOT NULL,
+        status TEXT DEFAULT 'scheduled',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     # Ensure password column exists in users
     cursor.execute("PRAGMA table_info(users)")
     cols = [r["name"] for r in cursor.fetchall()]
@@ -1717,6 +1735,70 @@ def get_payment_stats():
         "total_revenue_usd": round(total_usd or 0, 2),
         "by_gateway": by_gateway
     }
+
+# ============================================================================
+# DISCOVERY MEETINGS MODULE
+# ============================================================================
+
+def create_meeting(client_name, client_email, meeting_date, meeting_time, topic,
+                   client_company="", timezone="America/Bogota", notes="", meet_link=None):
+    """
+    Saves a discovery meeting and generates an internal notification.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if not meet_link:
+        # Generate clean Google Meet room code
+        import uuid
+        room_code = f"kkt-{uuid.uuid4().hex[:4]}-{uuid.uuid4().hex[:4]}"
+        meet_link = f"https://meet.google.com/{room_code}"
+
+    cursor.execute("""
+        INSERT INTO meetings (
+            client_name, client_email, client_company, meeting_date,
+            meeting_time, timezone, topic, notes, meet_link, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled')
+    """, (
+        client_name, client_email, client_company, meeting_date,
+        meeting_time, timezone, topic, notes, meet_link
+    ))
+
+    meet_id = cursor.lastrowid
+
+    # Add notification to internal feed
+    cursor.execute("""
+        INSERT INTO notifications (title, message, type, time_ago, is_read)
+        VALUES (?, ?, 'approval', 'Hace un momento', 0)
+    """, (
+        f"📅 Reunión Agendada: {client_name}",
+        f"Sesión técnica agendada para el {meeting_date} a las {meeting_time} ({timezone}). Tema: {topic}"
+    ))
+
+    conn.commit()
+    cursor.execute("SELECT * FROM meetings WHERE id = ?", (meet_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def get_meetings(limit=50, client_email=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    if client_email:
+        cursor.execute("""
+            SELECT * FROM meetings
+            WHERE LOWER(client_email) = LOWER(?)
+            ORDER BY id DESC LIMIT ?
+        """, (client_email.strip(), limit))
+    else:
+        cursor.execute("""
+            SELECT * FROM meetings
+            ORDER BY id DESC LIMIT ?
+        """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 
 
 

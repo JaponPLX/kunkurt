@@ -46,6 +46,8 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "alejandrobelno964@gmail.com").strip().lower()
 ADMIN_NAME = os.getenv("ADMIN_NAME", "JaponPLX (Alejandro)").strip()
 DEFAULT_GITHUB_USER = os.getenv("DEFAULT_GITHUB_USER", "JaponPLX").strip()
+WHATSAPP_PHONE = os.getenv("WHATSAPP_PHONE", "573100000000").strip()
+CALENDLY_URL = os.getenv("CALENDLY_URL", "").strip()
 
 # Optional SMTP Settings (if not provided, email alerts are logged to EMAIL_LOG_PATH)
 SMTP_SERVER = os.getenv("SMTP_SERVER", "")
