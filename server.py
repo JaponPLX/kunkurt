@@ -55,12 +55,12 @@ def get_lan_ip():
 
 def get_effective_smtp_config():
     db_settings = database.get_smtp_settings()
-    host = db_settings.get("smtp_host") or SMTP_SERVER or os.environ.get("KUNKURT_SMTP_HOST", "")
+    host = db_settings.get("smtp_host") or SMTP_SERVER or os.environ.get("KUNKURT_SMTP_HOST", "smtp.gmail.com")
     try:
         port = int(db_settings.get("smtp_port") or SMTP_PORT or os.environ.get("KUNKURT_SMTP_PORT", 587))
     except (ValueError, TypeError):
         port = 587
-    user = db_settings.get("smtp_user") or SMTP_USER or os.environ.get("KUNKURT_SMTP_USER", "")
+    user = db_settings.get("smtp_user") or SMTP_USER or os.environ.get("KUNKURT_SMTP_USER", ADMIN_EMAIL)
     password = db_settings.get("smtp_pass") or SMTP_PASSWORD or os.environ.get("KUNKURT_SMTP_PASS", "")
     return host, port, user, password
 
@@ -1661,8 +1661,8 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
             client_name = body.get("client_name", "").strip()
             client_email = body.get("client_email", "").strip().lower()
             client_company = body.get("client_company", "").strip()
-            meet_date = body.get("meeting_date", "").strip()
-            meet_time = body.get("meeting_time", "").strip()
+            meet_date = (body.get("meeting_date") or body.get("date") or "").strip()
+            meet_time = (body.get("meeting_time") or body.get("time") or "").strip()
             timezone = body.get("timezone", "America/Bogota").strip()
             topic = body.get("topic", "Sesión de Asesoría de Arquitectura de Software").strip()
             notes = body.get("notes", "").strip()
@@ -1697,6 +1697,8 @@ class KunkurtAPIHandler(SimpleHTTPRequestHandler):
             )
 
             # Gmail Notification to Admin & Client
+            if meeting:
+                meeting["meet_url"] = meeting.get("meet_link", "")
             notify_meeting_scheduled_emails(meeting)
 
             self.send_json({

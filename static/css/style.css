@@ -457,18 +457,59 @@ body {
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* Print Styles for Executive Dossier Export */
+/* Print Styles for Executive Dossier & Invoice / Contract Export */
 @media print {
   body {
     background: #ffffff !important;
     color: #111827 !important;
   }
   #matrixCanvas, .ambient-glow, .cyber-grid, header, footer, 
-  .modal-overlay, #ticketsSection, #catalogSection, #quotationSection, 
-  #analyticsSection, #teamChatSection, #wikiSection, .no-print {
+  #ticketsSection, #catalogSection, #quotationSection, #paymentsSection,
+  #analyticsSection, #teamChatSection, #wikiSection, .no-print,
+  #floatingWhatsAppBtn, #copilotFloatingBtn, #copilotChatWindow {
     display: none !important;
   }
-  #executiveDossierPrintable {
+
+  /* When printing Invoice or Contract modal */
+  body.printing-invoice .modal-overlay:not(#invoiceModal) {
+    display: none !important;
+  }
+  body.printing-invoice #executiveDossierPrintable {
+    display: none !important;
+  }
+  body.printing-invoice #invoiceModal {
+    display: block !important;
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+  body.printing-invoice #invoiceModal .modal-content {
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-invoice #invoiceModal .modal-content > div:first-child,
+  body.printing-invoice #invoiceModal .grid.grid-cols-2 {
+    display: none !important;
+  }
+  body.printing-invoice #printableDocumentBox {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 1.5cm !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Default dossier printable */
+  body:not(.printing-invoice) #executiveDossierPrintable {
     display: block !important;
     position: relative !important;
     width: 100% !important;
@@ -476,6 +517,10 @@ body {
     background: #ffffff !important;
     color: #111827 !important;
   }
+  body:not(.printing-invoice) .modal-overlay {
+    display: none !important;
+  }
+
   .print-page-break {
     page-break-after: always;
   }

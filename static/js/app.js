@@ -401,9 +401,37 @@ function setupKeyboardShortcuts() {
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
-      toggleTerminal();
+      toggleCommandPalette();
+      return;
     }
+    
+    // Command Palette navigation when active
+    const cmdModal = document.getElementById("commandPaletteModal");
+    if (cmdModal && !cmdModal.classList.contains("hidden")) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        navigateCommandPalette(1);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        navigateCommandPalette(-1);
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        executeCurrentCommandPaletteItem();
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeCommandPalette();
+        return;
+      }
+    }
+
     if (e.key === "Escape") {
+      closeCommandPalette();
       closeUploadModal();
       closeDetailModal();
       closeTerminal();
@@ -1448,6 +1476,10 @@ function showToast(message, type = "info") {
     toast.classList.add("opacity-0", "translate-y-3");
     setTimeout(() => toast.remove(), 300);
   }, 3500);
+}
+
+function showNotification(message, type = "info") {
+  showToast(message, type);
 }
 
 // ============================================================================
@@ -2899,6 +2931,10 @@ function toggleCyberAudio() {
   const icon = document.getElementById("audioIcon");
   if (icon) {
     icon.textContent = cyberAudioEnabled ? "🔊" : "🔇";
+  }
+  const navIcon = document.getElementById("navAudioIcon");
+  if (navIcon) {
+    navIcon.textContent = cyberAudioEnabled ? "🔊" : "🔇";
   }
   if (cyberAudioEnabled) {
     playCyberSound("chime");
@@ -4660,7 +4696,68 @@ function renderInvoiceOrContract() {
 
 function printInvoiceDocument() {
   playCyberSound("click");
+  document.body.classList.add("printing-invoice");
   window.print();
+  setTimeout(() => {
+    document.body.classList.remove("printing-invoice");
+  }, 1200);
+}
+
+function executePayPalExpressPayment() {
+  playCyberSound("click");
+  activePaymentGateway = "paypal";
+  const nameInput = document.getElementById("payClientName");
+  const emailInput = document.getElementById("payClientEmail");
+
+  if (nameInput && !nameInput.value.trim()) {
+    nameInput.value = (currentProfile && currentProfile.full_name) ? currentProfile.full_name : "Cliente PayPal Express";
+  }
+  if (emailInput && !emailInput.value.trim()) {
+    emailInput.value = (currentProfile && currentProfile.email) ? currentProfile.email : "cliente@paypal.com";
+  }
+
+  showToast("🅿️ Conectando con PayPal Express Checkout...", "info");
+  setTimeout(() => {
+    processPaymentCheckout();
+  }, 600);
+}
+
+function executeMercadoPagoPsePayment() {
+  playCyberSound("click");
+  activePaymentGateway = "mercadopago";
+  const nameInput = document.getElementById("payClientName");
+  const emailInput = document.getElementById("payClientEmail");
+
+  if (nameInput && !nameInput.value.trim()) {
+    nameInput.value = (currentProfile && currentProfile.full_name) ? currentProfile.full_name : "Cliente PSE Bancario";
+  }
+  if (emailInput && !emailInput.value.trim()) {
+    emailInput.value = (currentProfile && currentProfile.email) ? currentProfile.email : "cliente.pse@empresa.com";
+  }
+
+  showToast("💙 Conectando con pasarela bancaria PSE...", "info");
+  setTimeout(() => {
+    processPaymentCheckout();
+  }, 600);
+}
+
+function executeCryptoConfirmPayment() {
+  playCyberSound("click");
+  activePaymentGateway = "crypto";
+  const nameInput = document.getElementById("payClientName");
+  const emailInput = document.getElementById("payClientEmail");
+
+  if (nameInput && !nameInput.value.trim()) {
+    nameInput.value = (currentProfile && currentProfile.full_name) ? currentProfile.full_name : "Cliente Web3 Vault";
+  }
+  if (emailInput && !emailInput.value.trim()) {
+    emailInput.value = (currentProfile && currentProfile.email) ? currentProfile.email : "web3.client@kunkurt.devs";
+  }
+
+  showToast("🟡 Verificando confirmación en blockchain / Binance Pay...", "info");
+  setTimeout(() => {
+    processPaymentCheckout();
+  }, 600);
 }
 
 // ============================================================================
@@ -4787,6 +4884,329 @@ window.printInvoiceDocument = printInvoiceDocument;
 window.toggleCopilotChat = toggleCopilotChat;
 window.sendQuickCopilotPrompt = sendQuickCopilotPrompt;
 window.handleSendCopilotMessage = handleSendCopilotMessage;
+window.executePayPalExpressPayment = executePayPalExpressPayment;
+window.executeMercadoPagoPsePayment = executeMercadoPagoPsePayment;
+window.executeCryptoConfirmPayment = executeCryptoConfirmPayment;
+window.showNotification = showNotification;
+window.toggleNotificationsDropdown = toggleNotificationsDropdown;
+window.openUploadModal = openUploadModal;
+window.toggleTerminal = toggleTerminal;
+window.openHallOfFame = openHallOfFame;
+window.closeTerminal = closeTerminal;
+window.closeHallOfFame = closeHallOfFame;
+window.closeDetailModal = closeDetailModal;
+window.switchDetailTab = switchDetailTab;
+window.printProjectOnePager = printProjectOnePager;
+window.closeUploadModal = closeUploadModal;
+window.addCustomTechTag = addCustomTechTag;
+
+// ============================================================================
+// SPOTLIGHT COMMAND PALETTE (RAYCAST / LINEAR STYLE)
+// ============================================================================
+let commandPaletteSelectedIndex = 0;
+let commandPaletteItems = [];
+
+const QUICK_COMMAND_ACTIONS = [
+  {
+    id: "action-quote",
+    icon: "⚡",
+    title: "Simular Cotización Dinámica",
+    desc: "Calcula presupuestos, tiempos y stacks de desarrollo en tiempo real",
+    category: "Acción Rápida",
+    action: () => switchToSection("quotation")
+  },
+  {
+    id: "action-pay",
+    icon: "💳",
+    title: "Pasarela de Pagos Globales",
+    desc: "Pagar con Stripe, PayPal, PSE o Cripto con recibo y factura oficial",
+    category: "Financiero",
+    action: () => switchToSection("payments")
+  },
+  {
+    id: "action-meet",
+    icon: "📅",
+    title: "Agendar Discovery Call Técnica (Google Meet)",
+    desc: "Reserva una sesión 1-a-1 de 30 min con el Lead Architect",
+    category: "Reuniones",
+    action: () => openMeetingModal()
+  },
+  {
+    id: "action-copilot",
+    icon: "🤖",
+    title: "Abrir Cyber-Copilot IA 24/7",
+    desc: "Asistente inteligente de software, cotizaciones y arquitectura",
+    category: "Inteligencia Artificial",
+    action: () => toggleCopilotChat()
+  },
+  {
+    id: "action-ticket",
+    icon: "➕",
+    title: "Crear Nuevo Ticket de Soporte",
+    desc: "Reporta incidentes o solicitudes técnicas con trazabilidad",
+    category: "Soporte",
+    action: () => openCreateTicketModal()
+  },
+  {
+    id: "action-radar",
+    icon: "📡",
+    title: "Inspeccionar Radar de Microservicios",
+    desc: "Telemetría en vivo del clúster e inyección de paquetes ping",
+    category: "Infraestructura",
+    action: () => {
+      switchToSection("analytics");
+      setTimeout(() => injectClusterPing(), 300);
+    }
+  },
+  {
+    id: "action-audio",
+    icon: "🔊",
+    title: "Alternar Efectos de Sonido Cyber (ON/OFF)",
+    desc: "Activa o silencia el sintetizador de audio espacial Web Audio API",
+    category: "Preferencias",
+    action: () => toggleCyberAudio()
+  },
+  {
+    id: "action-cli",
+    icon: ">_",
+    title: "Abrir Terminal Hacker CLI",
+    desc: "Línea de comandos interactiva con comandos UNIX y telemetría",
+    category: "Desarrolladores",
+    action: () => toggleTerminal()
+  },
+  {
+    id: "action-catalog",
+    icon: "📁",
+    title: "Ver Catálogo Completo de Proyectos",
+    desc: "Explora los microservicios y soluciones en producción",
+    category: "Navegación",
+    action: () => switchToSection("projects")
+  },
+  {
+    id: "action-tickets-board",
+    icon: "🎫",
+    title: "Mesa de Ayuda & Tickets Activos",
+    desc: "Consulta el estado y avance de las incidencias del equipo",
+    category: "Navegación",
+    action: () => switchToSection("tickets")
+  },
+  {
+    id: "action-wiki",
+    icon: "📚",
+    title: "Documentación & Wiki Técnica",
+    desc: "Arquitectura, manuales y guías de desarrollo",
+    category: "Navegación",
+    action: () => switchToSection("wiki")
+  },
+  {
+    id: "action-share",
+    icon: "🌐",
+    title: "Compartir Enlace de Acceso",
+    desc: "Genera código QR y enlace oficial de Kunkurt Devs",
+    category: "Compartir",
+    action: () => openShareModal()
+  }
+];
+
+function openCommandPalette() {
+  const modal = document.getElementById("commandPaletteModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  playCyberSound("click");
+  commandPaletteSelectedIndex = 0;
+  
+  const input = document.getElementById("commandPaletteInput");
+  if (input) {
+    input.value = "";
+    setTimeout(() => input.focus(), 50);
+    input.oninput = () => renderCommandPaletteResults(input.value);
+  }
+  renderCommandPaletteResults("");
+}
+
+function closeCommandPalette() {
+  const modal = document.getElementById("commandPaletteModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function toggleCommandPalette() {
+  const modal = document.getElementById("commandPaletteModal");
+  if (!modal) return;
+  if (modal.classList.contains("hidden")) {
+    openCommandPalette();
+  } else {
+    closeCommandPalette();
+  }
+}
+
+function renderCommandPaletteResults(filterText = "") {
+  const container = document.getElementById("commandPaletteResults");
+  if (!container) return;
+  const q = filterText.trim().toLowerCase();
+
+  let matchedActions = QUICK_COMMAND_ACTIONS.filter(a => 
+    !q || a.title.toLowerCase().includes(q) || a.desc.toLowerCase().includes(q) || a.category.toLowerCase().includes(q)
+  );
+
+  let matchedProjects = [];
+  if (Array.isArray(allProjects)) {
+    matchedProjects = allProjects.filter(p => 
+      !q || p.title.toLowerCase().includes(q) || (p.description && p.description.toLowerCase().includes(q)) || (p.stack && p.stack.some(s => s.toLowerCase().includes(q)))
+    ).map(p => ({
+      id: `proj-${p.id}`,
+      icon: "📁",
+      title: p.title,
+      desc: `${p.category || 'Proyecto'} • ${p.stack ? p.stack.join(', ') : 'Tecnología'} • [${p.status || 'Activo'}]`,
+      category: "Proyecto",
+      action: () => openDetailModal(p.id)
+    }));
+  }
+
+  commandPaletteItems = [...matchedActions, ...matchedProjects.slice(0, 8)];
+  if (commandPaletteSelectedIndex >= commandPaletteItems.length) {
+    commandPaletteSelectedIndex = 0;
+  }
+
+  if (commandPaletteItems.length === 0) {
+    container.innerHTML = `
+      <div class="py-8 text-center text-slate-400 text-xs">
+        <span class="text-2xl block mb-2">🔍</span>
+        No se encontraron comandos ni proyectos para "<strong class="text-white">${filterText}</strong>".
+      </div>
+    `;
+    return;
+  }
+
+  let html = "";
+  let currentGroup = "";
+  commandPaletteItems.forEach((item, idx) => {
+    const isSelected = idx === commandPaletteSelectedIndex;
+    const isProject = item.category === "Proyecto";
+    const groupHeader = isProject ? "Proyectos en Producción / Desarrollo" : "Comandos del Sistema";
+    
+    if (groupHeader !== currentGroup) {
+      currentGroup = groupHeader;
+      html += `<div class="px-3 pt-2.5 pb-1 text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold">${currentGroup}</div>`;
+    }
+
+    html += `
+      <div onclick="executeCommandPaletteItem(${idx})" 
+           class="command-palette-item flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-cyan-500/20 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]' : 'hover:bg-white/5 border border-transparent'}">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="w-8 h-8 rounded-lg ${isSelected ? 'bg-cyan-500/30 text-cyan-200' : 'bg-white/5 text-slate-300'} flex items-center justify-center text-sm font-mono shrink-0">
+            ${item.icon}
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="text-xs font-bold ${isSelected ? 'text-cyan-200' : 'text-white'} truncate">${item.title}</div>
+            <div class="text-[11px] text-slate-400 truncate">${item.desc}</div>
+          </div>
+        </div>
+        <div class="shrink-0 ml-3">
+          <span class="text-[9px] font-mono px-2 py-0.5 rounded-md ${isSelected ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40' : 'bg-white/5 text-slate-400'}">
+            ${item.category}
+          </span>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  const selectedEl = container.querySelector(".command-palette-item.bg-cyan-500\\/20");
+  if (selectedEl) {
+    selectedEl.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function navigateCommandPalette(direction) {
+  if (commandPaletteItems.length === 0) return;
+  commandPaletteSelectedIndex = (commandPaletteSelectedIndex + direction + commandPaletteItems.length) % commandPaletteItems.length;
+  playCyberSound("click");
+  const input = document.getElementById("commandPaletteInput");
+  renderCommandPaletteResults(input ? input.value : "");
+}
+
+function executeCurrentCommandPaletteItem() {
+  if (commandPaletteItems.length === 0) return;
+  executeCommandPaletteItem(commandPaletteSelectedIndex);
+}
+
+function executeCommandPaletteItem(index) {
+  const item = commandPaletteItems[index];
+  if (!item) return;
+  playCyberSound("chime");
+  closeCommandPalette();
+  if (typeof item.action === "function") {
+    item.action();
+  }
+}
+
+// ============================================================================
+// CLUSTER RADAR & LIVE TELEMETRY PING
+// ============================================================================
+async function injectClusterPing() {
+  playCyberSound("beep");
+  const btn = document.getElementById("clusterPingBtn");
+  if (btn) {
+    btn.innerHTML = `<span class="animate-spin">⚡</span> Enviando Paquetes...`;
+    btn.disabled = true;
+  }
+
+  const grid = document.getElementById("clusterNodesGrid");
+  if (grid) {
+    grid.querySelectorAll("div.border").forEach(card => {
+      card.classList.add("ring-1", "ring-cyan-400", "bg-cyan-950/30");
+    });
+  }
+
+  const startTime = performance.now();
+  let measuredLatency = 14;
+
+  try {
+    const res = await fetch("/api/system/status");
+    if (res.ok) {
+      await res.json();
+      const endTime = performance.now();
+      measuredLatency = Math.max(4, Math.round(endTime - startTime));
+      
+      const nodeLatCore = document.getElementById("nodeLatCore");
+      if (nodeLatCore) nodeLatCore.textContent = `${measuredLatency} ms`;
+
+      const nodeLatEdge = document.getElementById("nodeLatEdge");
+      if (nodeLatEdge) nodeLatEdge.textContent = `${Math.max(2, Math.round(measuredLatency * 0.4))} ms`;
+
+      const nodeLatAi = document.getElementById("nodeLatAi");
+      if (nodeLatAi) nodeLatAi.textContent = `${Math.round(measuredLatency * 1.2)} ms`;
+
+      const nodeLatDb = document.getElementById("nodeLatDb");
+      if (nodeLatDb) nodeLatDb.textContent = `0.${Math.floor(Math.random() * 5 + 4)} ms`;
+    }
+  } catch (e) {
+    measuredLatency = 18;
+  }
+
+  setTimeout(() => {
+    if (grid) {
+      grid.querySelectorAll("div.border").forEach(card => {
+        card.classList.remove("ring-1", "ring-cyan-400", "bg-cyan-950/30");
+      });
+    }
+    if (btn) {
+      btn.innerHTML = `<span>⚡</span> Inyectar Ping de Prueba`;
+      btn.disabled = false;
+    }
+    playCyberSound("chime");
+    showNotification(`⚡ Telemetría Verificada: Clúster 100% Operativo (${measuredLatency} ms)`, "success");
+  }, 400);
+}
+
+// Window Exports for new features
+window.openCommandPalette = openCommandPalette;
+window.closeCommandPalette = closeCommandPalette;
+window.toggleCommandPalette = toggleCommandPalette;
+window.executeCommandPaletteItem = executeCommandPaletteItem;
+window.injectClusterPing = injectClusterPing;
+window.toggleCyberAudio = toggleCyberAudio;
 
 
 

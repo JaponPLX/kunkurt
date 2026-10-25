@@ -102,6 +102,18 @@
             <button onclick="setLanguage('pt')" id="langBtn_pt" class="px-2 py-0.5 rounded-lg text-slate-300 hover:text-white transition-all" title="Português">PT</button>
           </div>
 
+          <!-- Spotlight Command Palette Pill (Ctrl+K) -->
+          <button onclick="openCommandPalette()" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-400 text-xs text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm" title="Paleta de Comandos Rápida (Ctrl+K)">
+            <span class="text-cyan-400 font-bold font-mono">⌘K</span>
+            <span class="text-[10px] text-slate-400 hidden xl:inline">Buscar</span>
+          </button>
+
+          <!-- Cyber Audio SFX Toggle Button -->
+          <button onclick="toggleCyberAudio()" class="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-400 text-xs text-slate-300 hover:text-white transition-all cursor-pointer" title="Efectos de Sonido Cyber (ON/OFF)">
+            <span id="navAudioIcon">🔊</span>
+            <span class="hidden lg:inline text-[10px] font-mono text-slate-400">SFX</span>
+          </button>
+
           <!-- Notifications Bell -->
           <div class="relative">
             <button onclick="toggleNotificationsDropdown()" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 transition-all relative" title="Notificaciones en vivo">
@@ -904,6 +916,123 @@
         </div>
       </div>
 
+      <!-- ====================================================================== -->
+      <!-- INTERACTIVE MICROSERVICES ARCHITECTURE RADAR & LIVE CLUSTER TELEMETRY -->
+      <!-- ====================================================================== -->
+      <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 mb-8 bg-[#0a0d18]/80 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+        
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 mb-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              CLUSTER TOPOLOGY & LIVE INFRASTRUCTURE RADAR
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+              <span>📡</span> Topología de Microservicios & Telemetría en Vivo
+            </h3>
+            <p class="text-xs text-slate-300/80 mt-1">
+              Monitoreo interactivo de la arquitectura distribuida, latencias y estado de salud de cada componente.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="injectClusterPing()" id="clusterPingBtn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-black font-extrabold text-xs shadow-[0_0_20px_rgba(6,182,212,0.4)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer">
+              <span>⚡</span> Inyectar Ping de Prueba
+            </button>
+          </div>
+        </div>
+
+        <!-- 6 Interactive Microservice Nodes Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="clusterNodesGrid">
+          
+          <!-- Node 1: Cloudflare Edge -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all group relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">🌐</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">ONLINE</span>
+            </div>
+            <div class="font-bold text-white text-xs">Edge CDN & SSL Gateway</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Cloudflare Anycast Global Relay</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-cyan-300 mt-3 pt-2 border-t border-white/5">
+              <span>Latencia:</span>
+              <span id="nodeLatEdge" class="font-bold text-emerald-400">4 ms</span>
+            </div>
+          </div>
+
+          <!-- Node 2: Python Core Gateway -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all group relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">⚡</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">99.98% SLA</span>
+            </div>
+            <div class="font-bold text-white text-xs">Python Async Micro-Core</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">RESTful High-Speed Backend</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-cyan-300 mt-3 pt-2 border-t border-white/5">
+              <span>Latencia:</span>
+              <span id="nodeLatCore" class="font-bold text-emerald-400">8 ms</span>
+            </div>
+          </div>
+
+          <!-- Node 3: AI Copilot Engine -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all group relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">🤖</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">ACTIVE</span>
+            </div>
+            <div class="font-bold text-white text-xs">Cyber-Copilot AI Engine</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">RAG & Neural Software Architect</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-cyan-300 mt-3 pt-2 border-t border-white/5">
+              <span>Respuesta:</span>
+              <span id="nodeLatAi" class="font-bold text-cyan-300">12 ms</span>
+            </div>
+          </div>
+
+          <!-- Node 4: SQLite Database -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all group relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">🗄️</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">WAL MODE</span>
+            </div>
+            <div class="font-bold text-white text-xs">SQLite Database WAL Cluster</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">ACID Concurrency & Auto-Backup</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-cyan-300 mt-3 pt-2 border-t border-white/5">
+              <span>I/O Speed:</span>
+              <span id="nodeLatDb" class="font-bold text-emerald-400">0.8 ms</span>
+            </div>
+          </div>
+
+          <!-- Node 5: Payment Gateway -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all group relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">💳</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">SECURE 256-BIT</span>
+            </div>
+            <div class="font-bold text-white text-xs">Financial Payments Gateway</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Stripe, PayPal, PSE, Binance Pay</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-cyan-300 mt-3 pt-2 border-t border-white/5">
+              <span>Checkout State:</span>
+              <span id="nodeLatPay" class="font-bold text-teal-300">Ready</span>
+            </div>
+          </div>
+
+          <!-- Node 6: Gmail SMTP Engine -->
+          <div class="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all group relative overflow-hidden">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xl">📬</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">PORT 587</span>
+            </div>
+            <div class="font-bold text-white text-xs">Gmail SMTP Notification Relay</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Real-time alerts to Admin & Clients</div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-cyan-300 mt-3 pt-2 border-t border-white/5">
+              <span>Queue Status:</span>
+              <span id="nodeLatMail" class="font-bold text-emerald-400">Live</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
       <!-- KPI Summary Cards -->
       <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
         <div class="glass-panel p-4 rounded-2xl border border-purple-500/30 text-center">
@@ -1066,43 +1195,39 @@
     <!-- Filters & Catalog Section -->
     <section id="catalogSection" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
       
-      <!-- Control Bar -->
-      <div class="glass-panel p-4 rounded-2xl border border-purple-500/20 mb-8 space-y-4">
+      <!-- Control Bar (Sleek Single-Level Bar) -->
+      <div class="glass-panel p-3 sm:p-4 rounded-2xl border border-white/10 mb-8 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 shadow-lg bg-[#0d121f]/70 backdrop-blur-xl">
         
-        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-          <!-- Search input -->
-          <div class="relative flex-1">
-            <svg class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-400/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <input type="text" id="searchInput" placeholder="Buscar por título, stack (FastAPI, Docker, RAG, CSS3...), o palabra clave..." 
-                   class="cyber-input pl-11 text-sm bg-purple-950/40">
+        <!-- Search input -->
+        <div class="relative flex-1 min-w-[260px]">
+          <svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <input type="text" id="searchInput" placeholder="Buscar por título, stack (FastAPI, Docker, RAG, CSS3...), o palabra clave..." 
+                 class="w-full bg-[#080b14]/90 text-xs text-white placeholder-slate-400 pl-10 pr-4 py-2.5 rounded-xl border border-white/10 focus:outline-none focus:border-cyan-400/60 transition-all">
+        </div>
+
+        <!-- Categories Pill Bar & Filters -->
+        <div class="flex items-center flex-wrap gap-2 justify-between lg:justify-end">
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button class="filter-btn filter-cat-btn active text-xs px-3 py-1.5 rounded-lg border border-transparent font-medium" data-category="all">Todos</button>
+            <button class="filter-btn filter-cat-btn text-xs px-3 py-1.5 rounded-lg border border-transparent font-medium" data-category="Inteligencia Artificial">IA & RAG</button>
+            <button class="filter-btn filter-cat-btn text-xs px-3 py-1.5 rounded-lg border border-transparent font-medium" data-category="Recursos Humanos & Ops">Talento & SaaS</button>
+            <button class="filter-btn filter-cat-btn text-xs px-3 py-1.5 rounded-lg border border-transparent font-medium" data-category="Web & Mobile">Web & Mobile</button>
           </div>
 
-          <!-- Status Dropdown -->
           <div class="flex items-center gap-2">
-            <span class="text-xs text-purple-300 font-medium whitespace-nowrap">Estado:</span>
-            <select id="statusFilter" class="bg-[#120824] text-xs font-semibold text-purple-200 rounded-xl px-3 py-2.5 border border-purple-500/30 focus:outline-none focus:border-purple-400">
+            <!-- Status Dropdown -->
+            <select id="statusFilter" class="bg-[#080b14]/90 text-xs font-semibold text-slate-300 rounded-xl px-2.5 py-2 border border-white/10 focus:outline-none focus:border-cyan-400">
               <option value="all">Todos los estados</option>
               <option value="production">🟢 En Producción</option>
               <option value="development">🟣 En Desarrollo</option>
               <option value="testing">🟡 En Pruebas</option>
               <option value="planning">🔵 En Planeación</option>
             </select>
-          </div>
-        </div>
 
-        <!-- Categories Pill Bar -->
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <div class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar">
-            <span class="text-xs text-purple-400 font-semibold uppercase tracking-wider mr-1">Áreas:</span>
-            <button class="filter-btn filter-cat-btn active" data-category="all">Todos</button>
-            <button class="filter-btn filter-cat-btn" data-category="Inteligencia Artificial">IA & RAG</button>
-            <button class="filter-btn filter-cat-btn" data-category="Recursos Humanos & Ops">Talento & SaaS</button>
-            <button class="filter-btn filter-cat-btn" data-category="Web & Mobile">Web & Frontend</button>
+            <button onclick="openUploadModal()" class="text-xs py-2 px-3.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 hover:text-white border border-purple-500/30 font-semibold transition-all whitespace-nowrap">
+              + Subir Proyecto
+            </button>
           </div>
-
-          <button onclick="openUploadModal()" class="btn-ghost-neon text-xs py-1.5 px-3">
-            + Subir Proyecto Manual
-          </button>
         </div>
 
       </div>
@@ -1145,8 +1270,8 @@
 
   </div>
 
-  <!-- FLOATING TERMINAL BUTTON -->
-  <div id="terminalFloatingBtn" class="fixed bottom-6 left-6 z-40">
+  <!-- FLOATING TERMINAL BUTTON (Subtly hidden by default; accessible via footer & Command Palette) -->
+  <div id="terminalFloatingBtn" class="hidden fixed bottom-6 left-6 z-40">
     <button onclick="toggleTerminal()" class="p-3 rounded-2xl bg-purple-950/80 border border-purple-500/40 text-purple-300 hover:text-white hover:border-purple-300 shadow-[0_0_25px_rgba(168,85,247,0.4)] backdrop-blur-md transition-all flex items-center gap-2 group">
       <span class="font-mono font-bold text-fuchsia-400 group-hover:animate-pulse">&gt;_</span>
       <span class="text-xs font-mono hidden sm:inline">Kunkurt CLI (Ctrl+K)</span>
@@ -3031,6 +3156,39 @@
         ➤
       </button>
     </form>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL: SPOTLIGHT COMMAND PALETTE (RAYCAST / LINEAR STYLE) -->
+  <!-- ====================================================================== -->
+  <div id="commandPaletteModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-start justify-center pt-16 sm:pt-24 px-4 pb-6">
+    <div class="fixed inset-0 bg-black/80 backdrop-blur-md" onclick="closeCommandPalette()"></div>
+    <div class="modal-content rounded-3xl border border-cyan-500/30 w-full max-w-2xl bg-[#090d18]/95 backdrop-blur-2xl shadow-[0_0_60px_rgba(6,182,212,0.35)] overflow-hidden relative z-10 flex flex-col">
+      
+      <!-- Search Input Header -->
+      <div class="flex items-center px-4 py-3.5 border-b border-white/10 gap-3 bg-white/5">
+        <svg class="w-5 h-5 text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="commandPaletteInput" placeholder="Escribe un comando, proyecto, acción (ej: 'cotizar', 'pagar', 'meet', 'fastapi')..." 
+               class="w-full bg-transparent text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none"
+               autocomplete="off" spellcheck="false">
+        <button onclick="closeCommandPalette()" class="text-[10px] font-mono px-2 py-0.5 rounded bg-white/10 text-slate-300 border border-white/10 hover:text-white">ESC</button>
+      </div>
+
+      <!-- Quick Actions List & Live Results -->
+      <div id="commandPaletteResults" class="max-h-[55vh] overflow-y-auto p-2 space-y-1">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Footer Hints -->
+      <div class="px-4 py-2.5 bg-black/50 border-t border-white/5 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+        <div class="flex items-center gap-3">
+          <span><kbd class="px-1.5 py-0.5 rounded bg-white/10 text-white">↑</kbd> <kbd class="px-1.5 py-0.5 rounded bg-white/10 text-white">↓</kbd> Navegar</span>
+          <span><kbd class="px-1.5 py-0.5 rounded bg-white/10 text-white">↵</kbd> Ejecutar</span>
+        </div>
+        <span class="text-cyan-400 font-bold">Kunkurt Command Hub</span>
+      </div>
+
+    </div>
   </div>
 
   <!-- ====================================================================== -->
