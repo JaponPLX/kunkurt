@@ -62,87 +62,108 @@
   <div class="relative z-10 flex flex-col min-h-screen">
 
     <!-- ====================================================================== -->
-    <!-- TOP FLOATING MINIMALIST NAVIGATION BAR (MATCHING SCREENSHOT) -->
     <!-- ====================================================================== -->
-    <header class="sticky top-0 z-40 border-b border-white/10 bg-[#06080d]/85 backdrop-blur-xl">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+    <!-- HIGH-END MODERN DEVELOPER SAAS NAVBAR (VERCEL / LINEAR STYLE) -->
+    <!-- ====================================================================== -->
+    <header class="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#07090e]/80 backdrop-blur-2xl transition-all">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-4">
         
-        <!-- Left: Brand Logo & Title -->
-        <div class="flex items-center gap-3 cursor-pointer" onclick="switchToSection('projects')">
-          <span class="text-cyan-400 font-bold text-lg select-none">▲</span>
-          <span class="text-white font-extrabold text-base sm:text-lg tracking-tight font-['Plus_Jakarta_Sans']">Kunkurt Devs</span>
-          <span class="hidden sm:inline-block px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 tracking-wider">v2.0</span>
-        </div>
-
-        <!-- Center: Clean Minimalist Nav Links -->
-        <nav class="hidden md:flex items-center gap-7 text-xs font-bold tracking-widest text-slate-300 uppercase">
-          <button id="navLinkProjects" onclick="switchToSection('projects')" class="hover:text-cyan-300 transition-colors">PROYECTOS</button>
-          <button id="navLinkQuote" onclick="switchToSection('quotation')" class="hover:text-cyan-300 transition-colors">COTIZADOR</button>
-          <button id="navTicketsBtn" onclick="switchToSection('tickets')" class="hover:text-cyan-300 transition-colors flex items-center gap-1.5">
-            <span id="navLinkTickets">TICKETS</span>
-            <span id="navTicketsBadge" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">0</span>
-          </button>
-          <button id="navLinkAnalytics" onclick="switchToSection('analytics')" class="hover:text-cyan-300 transition-colors">MÉTRICAS</button>
-          <button id="navLinkWiki" onclick="switchToSection('wiki')" class="hover:text-cyan-300 transition-colors">WIKI</button>
-        </nav>
-
-        <!-- Right: Actions, Notifications & Session Trigger -->
-        <div class="flex items-center gap-3">
-          
-          <!-- Live Service Status Radar Pill -->
-          <button onclick="openStatusModal()" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer" title="Ver Radar de Servicios & Uptime">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="navUptimeBadge">99.98% UPTIME</span>
-          </button>
-
-          <!-- Language Selector Switcher (ES / EN) -->
-          <div class="flex items-center border border-white/10 rounded-xl bg-white/5 p-0.5 text-[10px] font-bold">
-            <button onclick="setLanguage('es')" id="langBtn_es" class="px-2 py-0.5 rounded-lg bg-cyan-500 text-black font-extrabold transition-all" title="Español">ES</button>
-            <button onclick="setLanguage('en')" id="langBtn_en" class="px-2 py-0.5 rounded-lg text-slate-300 hover:text-white transition-all" title="English">EN</button>
-          </div>
-
-          <!-- Spotlight Command Palette Pill (Ctrl+K) -->
-          <button onclick="openCommandPalette()" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-400 text-xs text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm" title="Paleta de Comandos Rápida (Ctrl+K)">
-            <span class="text-cyan-400 font-bold font-mono">⌘K</span>
-            <span class="text-[10px] text-slate-400 hidden xl:inline">Buscar</span>
-          </button>
-
-          <!-- Cyber Audio SFX Toggle Button -->
-          <button onclick="toggleCyberAudio()" class="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 hover:border-cyan-400 text-xs text-slate-300 hover:text-white transition-all cursor-pointer" title="Efectos de Sonido Cyber (ON/OFF)">
-            <span id="navAudioIcon">🔊</span>
-            <span class="hidden lg:inline text-[10px] font-mono text-slate-400">SFX</span>
-          </button>
-
-          <!-- Notifications Bell -->
-          <div class="relative">
-            <button onclick="toggleNotificationsDropdown()" class="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 transition-all relative" title="Notificaciones en vivo">
-              <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-              <span id="notifBadge" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></span>
-            </button>
-            <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 p-4 rounded-2xl border border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 bg-[#0a0e17]/95 backdrop-blur-xl">
-              <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-                <span class="text-xs font-bold text-white uppercase tracking-wider">Centro de Notificaciones</span>
-                <span class="text-[10px] text-cyan-400 font-mono">Live Feed</span>
-              </div>
-              <div id="notifListContainer" class="space-y-2 max-h-72 overflow-y-auto"></div>
+        <!-- Left: Brand Logo, Name & Version Tag -->
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center gap-2.5 cursor-pointer group select-none" onclick="switchToSection('projects')">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-600/30 to-blue-600/30 border border-cyan-500/40 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.25)] group-hover:border-cyan-400 transition-all">
+              <span class="text-cyan-400 font-bold text-sm leading-none">▲</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-white font-bold text-sm sm:text-base tracking-tight font-['Plus_Jakarta_Sans'] group-hover:text-cyan-200 transition-colors">Kunkurt Devs</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">v2.8</span>
             </div>
           </div>
 
-          <!-- Auth Pill / User Profile -->
-          <button id="navLoginBtn" onclick="openLoginModal()" class="px-5 py-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 hover:border-cyan-400 text-white font-semibold text-xs tracking-wider uppercase transition-all backdrop-blur-md">
-            ACCEDER
-          </button>
+          <!-- Divider -->
+          <div class="hidden md:block h-4 w-px bg-white/10 mx-1"></div>
+
+          <!-- Center-Left: Minimalist Navigation Links (Title Case, Clean Hover Pills) -->
+          <nav class="hidden md:flex items-center gap-1 text-xs font-medium text-slate-400">
+            <button id="navLinkProjects" onclick="switchToSection('projects')" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/[0.06] transition-all">
+              Proyectos
+            </button>
+            <button id="navLinkQuote" onclick="switchToSection('quotation')" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/[0.06] transition-all">
+              Cotizador
+            </button>
+            <button id="navTicketsBtn" onclick="switchToSection('tickets')" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/[0.06] transition-all flex items-center gap-1.5">
+              <span id="navLinkTickets">Tickets</span>
+              <span id="navTicketsBadge" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">0</span>
+            </button>
+            <button id="navLinkAnalytics" onclick="switchToSection('analytics')" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/[0.06] transition-all">
+              Métricas
+            </button>
+            <button id="navLinkWiki" onclick="switchToSection('wiki')" class="px-2.5 py-1.5 rounded-lg hover:text-white hover:bg-white/[0.06] transition-all">
+              Wiki
+            </button>
+          </nav>
+        </div>
+
+        <!-- Right: Cohesive, Minimalist Utilities -->
+        <div class="flex items-center gap-2 sm:gap-2.5">
           
-          <div id="navLogoutBtn" onclick="openUserProfileModal()" class="hidden items-center gap-2.5 cursor-pointer group px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-cyan-400 transition-all">
-            <img id="currentUserAvatar" src="https://avatars.githubusercontent.com/u/171938813?v=4" alt="Avatar" class="w-6 h-6 rounded-full object-cover ring-1 ring-cyan-400">
-            <span id="currentUserName" class="text-xs font-bold text-white leading-tight">JaponPLX</span>
-            <span id="currentUserRoleBadge" class="text-[9px] font-semibold text-cyan-300 font-mono px-1.5 py-0.2 rounded-full bg-cyan-950/80 border border-cyan-500/30">Admin</span>
+          <!-- Command Palette Trigger (Linear Style ⌘K) -->
+          <button onclick="openCommandPalette()" class="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.08] hover:border-white/20 text-xs text-slate-400 hover:text-white transition-all cursor-pointer" title="Buscar en Kunkurt (Ctrl+K)">
+            <span class="text-xs">🔍</span>
+            <span class="text-[11px] hidden lg:inline">Buscar...</span>
+            <kbd class="font-mono text-[10px] bg-white/10 text-slate-300 px-1.5 py-0.5 rounded border border-white/10">⌘K</kbd>
+          </button>
+
+          <!-- System Status Micro-Pill -->
+          <button onclick="openStatusModal()" class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer" title="SLA & Uptime en Vivo">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="navUptimeBadge" class="hidden sm:inline">99.98%</span>
+          </button>
+
+          <!-- Minimalist Language Switcher (ES | EN) -->
+          <div class="flex items-center border border-white/[0.08] rounded-lg bg-white/[0.03] p-0.5 text-[10px] font-semibold">
+            <button onclick="setLanguage('es')" id="langBtn_es" class="px-1.5 py-0.5 rounded bg-cyan-500 text-black font-extrabold transition-all" title="Español">ES</button>
+            <button onclick="setLanguage('en')" id="langBtn_en" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-white transition-all" title="English">EN</button>
           </div>
 
-          <!-- Subtle Settings & Tools Hub Trigger -->
-          <button onclick="openToolsModal()" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 border border-white/10 transition-all" title="Herramientas, Roles & Integraciones">
-            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          <!-- Utility Icons (SFX Audio + Notifications + Tools Hub) -->
+          <div class="flex items-center gap-1 border-l border-white/10 pl-2">
+            <!-- Audio SFX Toggle -->
+            <button onclick="toggleCyberAudio()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors" title="Efectos de Sonido Cyber (ON/OFF)">
+              <span id="navAudioIcon" class="text-xs">🔊</span>
+            </button>
+
+            <!-- Notifications Bell -->
+            <div class="relative">
+              <button onclick="toggleNotificationsDropdown()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors relative" title="Notificaciones en vivo">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <span id="notifBadge" class="hidden absolute top-1 right-1 w-2 h-2 bg-cyan-400 rounded-full animate-ping"></span>
+              </button>
+              <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 p-4 rounded-2xl border border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 bg-[#0a0e17]/95 backdrop-blur-xl">
+                <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+                  <span class="text-xs font-bold text-white uppercase tracking-wider">Centro de Notificaciones</span>
+                  <span class="text-[10px] text-cyan-400 font-mono">Live Feed</span>
+                </div>
+                <div id="notifListContainer" class="space-y-2 max-h-72 overflow-y-auto"></div>
+              </div>
+            </div>
+
+            <!-- Settings / Tools Hub -->
+            <button onclick="openToolsModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors" title="Herramientas & Roles">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </button>
+          </div>
+
+          <!-- User Profile / Auth Action (Clean Linear Style Pill) -->
+          <button id="navLoginBtn" onclick="openLoginModal()" class="px-3.5 py-1.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 hover:border-cyan-400 text-white font-medium text-xs tracking-wide transition-all">
+            Acceder
           </button>
+          
+          <div id="navLogoutBtn" onclick="openUserProfileModal()" class="hidden items-center gap-2 cursor-pointer group px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.08] hover:border-cyan-500/40 hover:bg-white/[0.06] transition-all">
+            <img id="currentUserAvatar" src="https://avatars.githubusercontent.com/u/171938813?v=4" alt="Avatar" class="w-5 h-5 rounded-full object-cover ring-1 ring-cyan-400/60">
+            <span id="currentUserName" class="text-xs font-semibold text-slate-200 group-hover:text-white leading-tight">JaponPLX</span>
+            <span id="currentUserRoleBadge" class="text-[9px] font-mono text-cyan-300 bg-cyan-950/80 px-1.5 py-0.2 rounded border border-cyan-500/30">Admin</span>
+          </div>
 
         </div>
       </div>

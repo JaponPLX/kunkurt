@@ -4324,11 +4324,11 @@ let currentLanguage = "es";
 
 const I18N = {
   es: {
-    navProjects: "PROYECTOS",
-    navQuote: "COTIZADOR",
-    navTickets: "TICKETS",
-    navAnalytics: "MÉTRICAS",
-    navWiki: "WIKI",
+    navProjects: "Proyectos",
+    navQuote: "Cotizador",
+    navTickets: "Tickets",
+    navAnalytics: "Métricas",
+    navWiki: "Wiki",
     catalog: "Catálogo",
     tickets: "Tickets",
     quote: "Cotizador",
@@ -4354,11 +4354,11 @@ const I18N = {
     statusPlan: "🔵 En Planeación"
   },
   en: {
-    navProjects: "PROJECTS",
-    navQuote: "ESTIMATOR",
-    navTickets: "TICKETS",
-    navAnalytics: "METRICS",
-    navWiki: "WIKI",
+    navProjects: "Projects",
+    navQuote: "Estimator",
+    navTickets: "Tickets",
+    navAnalytics: "Metrics",
+    navWiki: "Wiki",
     catalog: "Catalog",
     tickets: "Tickets",
     quote: "Estimator",
