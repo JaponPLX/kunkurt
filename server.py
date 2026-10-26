@@ -9,6 +9,7 @@ Featuring:
 
 import os
 import sys
+import re
 import json
 import urllib.parse
 import urllib.request
@@ -563,52 +564,91 @@ Kunkurt Devs
 """
         send_system_email(client_email, client_subject, client_body)
 
+def _matches_copilot_phrase(msg: str, phrases: tuple) -> bool:
+    for p in phrases:
+        if len(p) <= 3:
+            if re.search(r'\b' + re.escape(p) + r'\b', msg):
+                return True
+        else:
+            if p in msg:
+                return True
+    return False
+
+
 def handle_copilot_chat(user_msg, user_role="public", user_name="Invitado"):
     """
     Intelligent AI Copilot reasoning engine specialized in software engineering,
     architecture, project estimations, HelpDesk, and payments for Kunkurt Devs.
     """
+    # Guard against swapped parameters
+    known_roles = ("public", "client", "developer", "admin", "employee", "manager", "qa", "designer")
+    if user_role not in known_roles and user_name in known_roles:
+        user_role, user_name = user_name, user_role
+
     msg = user_msg.lower().strip()
     
     # 1. Greetings / Introduction
-    if any(k in msg for k in ("hola", "buenos dias", "buenas tardes", "buenas noches", "saludos", "hello", "hi")):
+    if _matches_copilot_phrase(msg, ("hola", "buenos dias", "buenas tardes", "buenas noches", "saludos", "hello", "hi", "hey", "que tal")):
         return (
-            f"¡Hola {user_name}! 👋 Soy **Kunkurt Copilot**, el asistente de inteligencia artificial de Kunkurt Devs.\n\n"
-            "Puedo ayudarte a:\n"
-            "• ⚡ **Recomendar la arquitectura técnica** ideal para tu idea o empresa.\n"
-            "• 💰 **Calcular costos y cronogramas de desarrollo** en tiempo real.\n"
-            "• 💳 **Explicar métodos de pago** (Stripe, PayPal, PSE Mercado Pago, Cripto).\n"
-            "• 📅 **Agendar una videollamada técnica (Discovery Call)** con nuestro director Alejandro.\n"
-            "• 🎫 **Reportar una falla o abrir un ticket** en la mesa de ayuda.\n\n"
-            "¿En qué proyecto o requerimiento estás trabajando hoy?"
+            f"¡Hola {user_name}! 👋 Soy **Kunkurt Copilot**, el asistente de inteligencia artificial y arquitectura de Kunkurt Devs.\n\n"
+            "Puedo ayudarte en tiempo real con:\n"
+            "• ⚡ **Cotización instantánea:** Calcula el presupuesto de tu web, SaaS o app móvil.\n"
+            "• 🛠️ **Arquitectura técnica:** Microservicios, Docker, FastAPI y modelos de IA RAG.\n"
+            "• 💳 **Pasarelas de pago:** Cómo pagar con tarjeta, PayPal, PSE o Cripto (anticipo 50%).\n"
+            "• 📅 **Discovery Call:** Agendar una videollamada de 30 min por Google Meet con Alejandro.\n"
+            "• 🎫 **Soporte & Tickets:** Reportar incidencias o solicitar nuevas funcionalidades.\n\n"
+            "¿Sobre qué proyecto o requerimiento deseas consultar hoy?"
         )
 
     # 2. Pricing / Quotes / Costs
-    if any(k in msg for k in ("precio", "costo", "cotizar", "cuanto vale", "cuánto cuesta", "presupuesto", "tarifa", "cuanto demora")):
+    if _matches_copilot_phrase(msg, ("precio", "costo", "cuesta", "cuanto cuesta", "cuánto cuesta", "cotiz", "cuanto vale", "presupuesto", "tarifa", "cuanto demora", "tiempo", "demora", "semanas", "valores", "estimacion", "estimación")):
         return (
             "💼 **Inversión y Tiempos de Entrega Estimados en Kunkurt:**\n\n"
             "• **Full-Stack Web App:** Desde **$1,200 USD** (Entrega: 3 a 4 semanas).\n"
             "• **Microservicios & API Core:** Desde **$1,800 USD** (Docker, Redis, alta concurrencia, 4 semanas).\n"
             "• **Sistema de IA Generativa & RAG:** Desde **$2,400 USD** (Vector DB, Embeddings, 5 semanas).\n"
-            "• **Plataforma SaaS Multi-Tenant:** Desde **$2,900 USD** (Subscripciones, roles, dashboard, 6 semanas).\n\n"
-            "💡 *Modalidad de pago:* Trabajamos con **50% de anticipo** para arrancar el desarrollo y **50% contraentrega** previa verificación de calidad.\n\n"
-            "Puedes usar nuestro **Cotizador Inteligente** en la pestaña superior o hacer clic en **Pagar Online** para iniciar."
+            "• **Plataforma SaaS Multi-Tenant:** Desde **$2,900 USD** (Suscripciones, roles, dashboard, 6 semanas).\n\n"
+            "💡 *Modalidad de pago:* Trabajamos con **50% de anticipo** para arrancar el desarrollo y **50% contraentrega** previa verificación de calidad con código fuente y despliegue incluido.\n\n"
+            "Puedes usar nuestro **Cotizador Inteligente** en la pestaña superior para personalizar los módulos exactos."
         )
 
     # 3. Payment Methods
-    if any(k in msg for k in ("pago", "pagar", "pasarela", "stripe", "paypal", "mercado pago", "pse", "tarjeta", "cripto", "usdt", "apple pay")):
+    if _matches_copilot_phrase(msg, ("pago", "pagar", "pasarela", "stripe", "paypal", "mercado pago", "pse", "tarjeta", "cripto", "usdt", "apple pay", "google pay", "como pago", "como se paga", "donde pago")):
         return (
             "💳 **Pasarelas de Pago Globales Disponibles en Kunkurt:**\n\n"
             "1. **Stripe:** Tarjetas de crédito y débito internacionales (Visa, Mastercard, Amex) con cifrado SSL 256-bit.\n"
-            "2. **PayPal:** Checkout universal en 1-clic con protección al comprador.\n"
-            "3. **Mercado Pago:** Transferencias bancarias directas por **PSE** (Colombia: Bancolombia, Nequi, Davivienda), transferencias SPEI (México) y Código QR.\n"
+            "2. **PayPal Express:** Pago instantáneo en 1-clic con saldo o cuentas vinculadas.\n"
+            "3. **Mercado Pago & PSE:** Transferencias bancarias directas en Colombia (Bancolombia, Nequi, Davivienda), México (SPEI) y tarjetas locales.\n"
             "4. **Apple Pay & Google Pay:** Cobro biométrico ultra rápido desde iPhone o Android con Face ID o huella.\n"
-            "5. **Criptomonedas / Binance Pay:** USDT (red TRC-20 y BEP-20) y Bitcoin sin intermediarios bancarios.\n\n"
-            "Todas las transacciones emiten un **comprobante oficial** con notificación instantánea a tu correo y al del equipo técnico."
+            "5. **Criptomonedas / Web3:** USDT / USDC sobre redes TRC-20, BEP-20 y Polygon.\n\n"
+            "Todas las transacciones generan un **comprobante oficial verificable** con notificación instantánea a tu correo."
         )
 
-    # 4. Meetings / Discovery Call
-    if any(k in msg for k in ("reunion", "reunión", "agendar", "llamada", "videollamada", "meet", "google meet", "calendly", "hablar")):
+    # 4. Mobile Apps & Multiplatform
+    if _matches_copilot_phrase(msg, ("app", "movil", "móvil", "mobile", "ios", "android", "flutter", "react native", "celular", "aplicacion", "aplicación")):
+        return (
+            "📱 **Desarrollo de Aplicaciones Móviles (iOS & Android):**\n\n"
+            "En Kunkurt Devs construimos aplicaciones móviles de alto rendimiento:\n"
+            "• **Frontend Móvil:** React Native y Flutter con interfaces fluidas a 60 FPS.\n"
+            "• **Backend & APIs:** FastAPI / Python con WebSockets para sincronización en tiempo real.\n"
+            "• **Publicación:** Gestión integral para App Store y Google Play Store.\n"
+            "• **Offline-First:** Almacenamiento local SQLite con sincronización automática en la nube.\n\n"
+            "Puedes agendar una reunión técnica o cotizar tu app móvil directamente en nuestra plataforma."
+        )
+
+    # 5. Core Services / Agency Overview
+    if _matches_copilot_phrase(msg, ("servicios", "hacen", "ofrecen", "que hacen", "a que se dedican", "quienes son", "kunkurt")):
+        return (
+            "🚀 **Servicios Principales de Ingeniería en Kunkurt Devs:**\n\n"
+            "• 🌐 **Desarrollo Web & SaaS:** Plataformas interactivas, paneles administrativos y arquitectura multi-tenant.\n"
+            "• 🤖 **Inteligencia Artificial Aplicada:** Agentes virtuales, motores RAG de búsqueda semántica y pipelines LLM.\n"
+            "• ☁️ **Cloud, Microservicios & DevOps:** Contenedores Docker, CI/CD con GitHub Actions y clústeres de alta disponibilidad.\n"
+            "• 💳 **Integración de Pasarelas Fintech:** Checkouts multidivisa seguros (Stripe, PayPal, PSE).\n"
+            "• 🎫 **Soporte & Mantenimiento SLA:** Mesa de ayuda en vivo con seguimiento de incidencias 24/7."
+        )
+
+    # 6. Meetings / Discovery Call
+    if _matches_copilot_phrase(msg, ("reunion", "reunión", "agendar", "llamada", "videollamada", "meet", "google meet", "calendly", "hablar", "contacto")):
         return (
             "📅 **Agendamiento de Discovery Call (30 minutos):**\n\n"
             "Puedes coordinar una videollamada técnica directamente con nuestro Director General **Alejandro (JaponPLX)** por Google Meet.\n\n"
@@ -616,22 +656,22 @@ def handle_copilot_chat(user_msg, user_role="public", user_name="Invitado"):
             "• Viabilidad técnica y arquitectura de tu solución.\n"
             "• Definición de sprints y entregables clave.\n"
             "• Cronograma de entrega y presupuesto cerrado.\n\n"
-            "👉 Haz clic en el botón **'📅 Agendar Reunión'** en la barra de accesos o en el cotizador para elegir el día y hora que mejor te acomode."
+            "👉 Haz clic en el botón **'📅 Agendar Llamada'** en el menú superior para seleccionar la fecha y hora que mejor te acomode."
         )
 
-    # 5. Tickets / Support / HelpDesk
-    if any(k in msg for k in ("ticket", "soporte", "error", "falla", "bug", "problema", "ayuda", "help")):
+    # 7. Tickets / Support / HelpDesk
+    if _matches_copilot_phrase(msg, ("ticket", "soporte", "error", "falla", "bug", "problema", "ayuda", "help", "incidencia")):
         return (
             "🎫 **Mesa de Ayuda & Soporte Técnico Kunkurt:**\n\n"
             "Si tienes una consulta, reporte de bug o solicitud de cambio en tu proyecto:\n"
             "• Dirígete a la pestaña **Tickets & Soporte**.\n"
-            "• Haz clic en **➕ Abrir Ticket** e ingresa el título, categoría y prioridad.\n"
-            "• Nuestro equipo de ingeniería asignará un desarrollador y recibirás las respuestas directamente por correo y en tu panel privado.\n\n"
-            "🔒 *Privacidad garantizada:* Cada cliente únicamente tiene acceso a sus propios tickets y requerimientos."
+            "• Haz clic en **➕ Nuevo Ticket** e ingresa el título, categoría y prioridad.\n"
+            "• Nuestro equipo de ingeniería dará respuesta en tiempo real con alertas directas a tu correo.\n\n"
+            "🔒 *Privacidad garantizada:* Cada usuario tiene acceso a su historial de tickets de soporte."
         )
 
-    # 6. Architecture / Tech Stack
-    if any(k in msg for k in ("tecnologia", "stack", "arquitectura", "docker", "python", "react", "ia", "rag", "microservicios", "seguridad")):
+    # 8. Architecture / Tech Stack
+    if _matches_copilot_phrase(msg, ("tecnologia", "stack", "arquitectura", "docker", "python", "react", "ia", "rag", "microservicios", "seguridad")):
         return (
             "⚡ **Stack Tecnológico & Arquitectura Kunkurt:**\n\n"
             "• **Backend:** Python (FastAPI / Asynchronous HTTP Core), Node.js / TypeScript, Redis para caching distribuido.\n"
@@ -641,14 +681,24 @@ def handle_copilot_chat(user_msg, user_role="public", user_name="Invitado"):
             "Todo nuestro código está diseñado bajo estándares limpios, rutas dinámicas portables y pruebas unitarias automáticas."
         )
 
-    # 7. Default Fallback
+    # 9. Guarantees & Contract
+    if _matches_copilot_phrase(msg, ("garantia", "garantía", "contrato", "seguridad", "nda", "confidencialidad", "propiedad", "codigo fuente", "código fuente")):
+        return (
+            "🛡️ **Garantías y Propiedad Intelectual en Kunkurt:**\n\n"
+            "• **100% Propiedad del Código:** Al finalizar el proyecto y liquidar contraentrega, se transfiere la totalidad del repositorio, licencias y documentación técnica.\n"
+            "• **Acuerdo de Confidencialidad (NDA):** Firmamos acuerdos de protección de propiedad intelectual antes de iniciar.\n"
+            "• **Garantía Post-Lanzamiento:** 30 días de garantía sin costo adicional para corrección de cualquier anomalía.\n"
+            "• **Infraestructura Contenerizada:** Te entregamos configuraciones Docker para que puedas alojarlo en cualquier nube (AWS, GCP, DigitalOcean, Render)."
+        )
+
+    # 10. Default Fallback
     return (
-        f"Comprendo lo que necesitas, {user_name}. En Kunkurt Devs diseñamos arquitecturas de software modernas, microservicios y sistemas de inteligencia artificial a la medida.\n\n"
+        f"Comprendo lo que necesitas, {user_name}. En Kunkurt Devs diseñamos arquitecturas de software modernas, microservicios, aplicaciones móviles y sistemas de inteligencia artificial a la medida.\n\n"
         "Te recomiendo:\n"
         "1. ⚡ **Cotizar tu proyecto** en nuestra calculadora para obtener un presupuesto en segundos.\n"
         "2. 📅 **Agendar una Discovery Call** con nuestro equipo para definir el alcance técnico.\n"
-        "3. 💬 Escribirnos directamente por **WhatsApp** para una respuesta express.\n\n"
-        "¿Te gustaría que te ayude a armar la estimación de tu proyecto?"
+        "3. 💳 **Revisar nuestras opciones de pago** con 50% de anticipo y 50% contraentrega.\n\n"
+        "¿Te gustaría que te ayude a calcular la cotización de tu requerimiento?"
     )
 
 class KunkurtAPIHandler(SimpleHTTPRequestHandler):

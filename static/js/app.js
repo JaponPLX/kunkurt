@@ -240,18 +240,15 @@ function setupRoleSwitcher() {
   }
   currentProfile = activeProfile;
 
-  const roleSelect = document.getElementById("roleSelect");
-  if (roleSelect) {
-    roleSelect.value = currentRole;
-    roleSelect.addEventListener("change", (e) => {
-      switchRole(e.target.value);
-    });
-  }
-
   updateRoleUI();
 }
 
 function switchRole(newRole) {
+  // Security RBAC: Only authorized admins can switch roles arbitrarily
+  if (newRole !== "public" && currentRole !== "admin" && (!activeProfile || activeProfile.role !== "admin")) {
+    console.warn("Acceso denegado: sólo el Administrador puede cambiar o asignar roles.");
+    return;
+  }
   if (!PROFILES[newRole]) return;
   currentRole = newRole;
   activeProfile = PROFILES[newRole];
@@ -259,9 +256,6 @@ function switchRole(newRole) {
 
   localStorage.setItem("kunkurt_active_role", newRole);
   localStorage.setItem("kunkurt_active_profile", JSON.stringify(activeProfile));
-
-  const roleSelect = document.getElementById("roleSelect");
-  if (roleSelect) roleSelect.value = newRole;
 
   updateRoleUI();
   loadProjects();
@@ -308,6 +302,36 @@ function updateRoleUI() {
   const teamChatSec = document.getElementById("teamChatSection");
   if (!isStaff && teamChatSec && !teamChatSec.classList.contains("hidden")) {
     switchToSection("projects");
+  }
+
+  // Settings & Tools Modal identity card & strict admin section protection
+  const toolsUserName = document.getElementById("toolsUserName");
+  const toolsUserEmail = document.getElementById("toolsUserEmail");
+  const toolsUserRoleBadge = document.getElementById("toolsUserRoleBadge");
+  const adminToolsSection = document.getElementById("adminToolsSection");
+  const adminIntegrationsSection = document.getElementById("adminIntegrationsSection");
+
+  if (toolsUserName) toolsUserName.textContent = activeProfile.name || "Usuario Kunkurt";
+  if (toolsUserEmail) toolsUserEmail.textContent = activeProfile.email || (currentRole === "public" ? "Sesión anónima (Visitante)" : "usuario@kunkurt.com");
+  if (toolsUserRoleBadge) {
+    toolsUserRoleBadge.textContent = activeProfile.roleName || "Visitante";
+    toolsUserRoleBadge.className = `text-[10px] font-semibold px-2.5 py-0.5 rounded-full text-white bg-gradient-to-r ${activeProfile.badgeClass || "from-slate-600 to-slate-800"}`;
+  }
+
+  const isAdmin = currentRole === "admin";
+  if (adminToolsSection) {
+    if (isAdmin) {
+      adminToolsSection.classList.remove("hidden");
+    } else {
+      adminToolsSection.classList.add("hidden");
+    }
+  }
+  if (adminIntegrationsSection) {
+    if (isAdmin) {
+      adminIntegrationsSection.classList.remove("hidden");
+    } else {
+      adminIntegrationsSection.classList.add("hidden");
+    }
   }
 }
 
@@ -3273,6 +3297,7 @@ function setPaymentMode(mode) {
   }
 
   updatePaymentAmountDisplay();
+  updateProcessPaymentButtonText();
 }
 
 function updatePaymentAmountDisplay() {
@@ -3284,6 +3309,20 @@ function updatePaymentAmountDisplay() {
     const eur = Math.round(paymentCurrentAmount * 0.92).toLocaleString("de-DE");
     localEl.textContent = `≈ $${cop} COP / €${eur} EUR`;
   }
+}
+
+function updateProcessPaymentButtonText() {
+  const btnProcess = document.getElementById("btnProcessPayment");
+  if (!btnProcess) return;
+  const titles = {
+    stripe: "Pagar con Tarjeta (Stripe Global)",
+    paypal: "Pagar con PayPal Express",
+    mercadopago: "Pagar con Mercado Pago / PSE",
+    apple_pay: "Pagar con Biometría (Apple / Google)",
+    crypto: "Confirmar Transferencia Cripto USDT"
+  };
+  const title = titles[activePaymentGateway] || "Confirmar y Procesar Pago Seguro";
+  btnProcess.innerHTML = `<span>🔒</span> ${title} ($${paymentCurrentAmount.toLocaleString("en-US", {minimumFractionDigits: 2})} USD)`;
 }
 
 function selectPaymentTab(gateway) {
@@ -3311,6 +3350,8 @@ function selectPaymentTab(gateway) {
   const emailVal = document.getElementById("payClientEmail")?.value || "cliente@empresa.com";
   const paypalAccountEl = document.getElementById("paypalOrderAccountPreview");
   if (paypalAccountEl) paypalAccountEl.textContent = emailVal;
+
+  updateProcessPaymentButtonText();
 }
 
 function handleCardNumberInput(input) {
@@ -5016,23 +5057,38 @@ async function handleSendCopilotMessage(e, presetText) {
 
   // If no botReply from API, use intelligent responsive knowledge base
   if (!botReply) {
-    if (lower.includes("cuesta") || lower.includes("costo") || lower.includes("cotiz") || lower.includes("precio") || lower.includes("presupuesto")) {
-      botReply = `💼 **Inversión y Tiempos de Entrega en Kunkurt Devs:**\n\n• **Full-Stack Web App:** Desde **$1,200 USD** (3-4 semanas).\n• **Microservicios & API Core:** Desde **$1,800 USD** (4-5 semanas).\n• **Sistema de IA & Motor RAG:** Desde **$2,500 USD** (4-6 semanas).\n• **Plataforma SaaS Multi-Tenant:** Desde **$2,900 USD** (5-7 semanas).\n\n💡 *Condición de inicio:* Anticipo del **50%** y saldo contraentrega con garantía de código e infraestructura Docker.`;
+    if (lower.includes("hola") || lower.includes("buenas") || lower.includes("hey") || lower.includes("saludos") || lower.includes("hi") || lower.includes("que tal") || lower.includes("buen dia")) {
+      botReply = `¡Hola! 👋 Soy **Kunkurt Copilot**, el asistente de ingeniería de software de **Kunkurt Devs** liderado por **Alejandro Beltrán (JaponPLX)**.\n\n¿En qué podemos colaborar con tu empresa u organización hoy?\n• ⚡ **Cotizar proyectos** (Web, Móvil, Microservicios o IA)\n• 💳 **Pasarela de pagos** (Stripe, PayPal, PSE Latam o Cripto USDT)\n• 📅 **Agendar Discovery Call** de 30 min por Google Meet\n• 🎫 **Soporte y Mesa de Ayuda SLA**`;
+      actionButtonsHtml = `
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>⚡</span> Cotizador Inteligente
+          </button>
+          <button onclick="openMeetingModal()" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>📅</span> Agendar Llamada
+          </button>
+          <button onclick="openPaymentModal({ concept: 'Anticipo de Desarrollo', fullAmount: 1950, amount: 975, mode: 'deposit50' })" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>💳</span> Pasarela de Pagos
+          </button>
+        </div>
+      `;
+    } else if (lower.includes("cuesta") || lower.includes("costo") || lower.includes("cotiz") || lower.includes("precio") || lower.includes("presupuesto") || lower.includes("tarifa") || lower.includes("cuanto vale") || lower.includes("semanas") || lower.includes("demora")) {
+      botReply = `💼 **Inversión y Tiempos de Entrega Estimados en Kunkurt Devs:**\n\n• **Full-Stack Web App:** Desde **$1,200 USD** (3 a 4 semanas).\n• **Microservicios & API Core:** Desde **$1,800 USD** (4 a 5 semanas).\n• **Sistema de IA & Motor RAG:** Desde **$2,500 USD** (4 a 6 semanas).\n• **Plataforma SaaS Multi-Tenant:** Desde **$2,900 USD** (5 a 7 semanas).\n• **Mobile App (iOS / Android):** Desde **$2,200 USD** (4 a 6 semanas).\n\n💡 *Condición de contratación:* Anticipo del **50%** para inicializar el sprint y **50% restante contraentrega** tras validación en staging.`;
       actionButtonsHtml = `
         <div class="flex flex-wrap gap-2 pt-2">
           <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
             <span>⚡</span> Ir al Cotizador
           </button>
           <button onclick="payQuotationDeposit()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
-            <span>💳</span> Pagar Anticipo
+            <span>💳</span> Pagar Anticipo (50%)
           </button>
         </div>
       `;
-    } else if (lower.includes("pago") || lower.includes("metodo") || lower.includes("pasarela") || lower.includes("tarjeta") || lower.includes("pse") || lower.includes("crypto") || lower.includes("paypal")) {
-      botReply = `💳 **Pasarelas de Pago Globales Disponibles en Kunkurt:**\n\n• **Stripe Global:** Tarjetas Visa, Mastercard, American Express (SSL 256-Bit).\n• **PayPal Express:** Pago instantáneo en 1-clic con saldo o cuentas vinculadas.\n• **Mercado Pago & PSE:** Pagos en moneda local (Colombia PSE, México SPEI, tarjetas locales).\n• **Apple Pay / Google Pay:** Verificación biométrica por FaceID / TouchID.\n• **Web3 & Cripto:** USDT / USDC sobre redes TRC-20, BEP-20 y Polygon.\n\n🔒 *Todas las transacciones emiten comprobante oficial con alerta a Gmail.*`;
+    } else if (lower.includes("pago") || lower.includes("pagar") || lower.includes("metodo") || lower.includes("pasarela") || lower.includes("tarjeta") || lower.includes("pse") || lower.includes("crypto") || lower.includes("paypal") || lower.includes("usdt") || lower.includes("como pago") || lower.includes("donde pago")) {
+      botReply = `💳 **Pasarelas de Pago Oficiales en Kunkurt Devs:**\n\n• **Stripe Global:** Tarjetas de crédito/débito internacionales Visa, MasterCard y Amex.\n• **PayPal Express:** Pago en 1-clic con protección al comprador.\n• **Mercado Pago PSE & Latam:** Transferencias bancarias PSE Colombia, Nequi y transferencias locales.\n• **Apple Pay / Google Pay:** Verificación biométrica instantánea por huella/FaceID.\n• **Cripto Bóveda USDT:** Redes TRC-20, BEP-20 (BNB) y Polygon MATIC.\n\n🔒 *Cada pago emite comprobante oficial con Transaction ID verificable y notificación a Gmail.*`;
       actionButtonsHtml = `
         <div class="flex flex-wrap gap-2 pt-2">
-          <button onclick="openPaymentModal({ concept: 'Servicios de Ingeniería', fullAmount: 1950, amount: 975, mode: 'deposit50' })" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+          <button onclick="openPaymentModal({ concept: 'Servicios de Ingeniería Kunkurt', fullAmount: 1950, amount: 975, mode: 'deposit50' })" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
             <span>💳</span> Abrir Pasarela de Pagos
           </button>
           <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 hover:text-white text-[11px] transition-all flex items-center gap-1">
@@ -5040,8 +5096,32 @@ async function handleSendCopilotMessage(e, presetText) {
           </button>
         </div>
       `;
-    } else if (lower.includes("agendar") || lower.includes("llamada") || lower.includes("reunión") || lower.includes("meet") || lower.includes("discovery") || lower.includes("alejandro")) {
-      botReply = `📅 **Discovery Call Técnica 1-a-1 con Alejandro:**\n\n• Sesión de **30 minutos** vía Google Meet.\n• Revisamos la viabilidad arquitectónica de tu software, stack tecnológico y estimación de costos en vivo.\n• Sin compromiso y con minuta técnica al finalizar.`;
+    } else if (/\b(app|apps|ios)\b/i.test(lower) || lower.includes("movil") || lower.includes("móvil") || lower.includes("android") || lower.includes("flutter") || lower.includes("react native") || lower.includes("celular")) {
+      botReply = `📱 **Desarrollo de Aplicaciones Móviles (iOS & Android):**\n\nDesarrollamos aplicaciones móviles nativas y cross-platform de alto rendimiento con **Flutter** o **React Native**, respaldadas por microservicios escalables en FastAPI/Node.\n\n• Publicación en App Store y Google Play Store.\n• Modo offline con sincronización SQLite local.\n• Notificaciones push y pagos in-app integrados.`;
+      actionButtonsHtml = `
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>⚡</span> Cotizar App Móvil
+          </button>
+          <button onclick="openMeetingModal()" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>📅</span> Conversar con el Lead Dev
+          </button>
+        </div>
+      `;
+    } else if (lower.includes("servicio") || lower.includes("hacen") || lower.includes("ofrecen") || lower.includes("que hacen") || lower.includes("quienes son") || lower.includes("kunkurt")) {
+      botReply = `🚀 **Capacidades Principales de Kunkurt Devs:**\n\n1. **Full-Stack Web:** SPAs y PWAs ultra reactivas (Next.js, Vue, Tailwind, WebSockets).\n2. **Arquitectura Cloud & Microservicios:** APIs REST y gRPC en Python/FastAPI con Docker.\n3. **Inteligencia Artificial Aplicada:** Agentes autónomos, LLMs locales, RAG y búsqueda vectorial.\n4. **Apps Móviles:** Experiencias fluidas a 60 FPS para iOS y Android.\n5. **Mesa de Ayuda & DevOps:** SLAs con monitoreo y soporte 24/7.`;
+      actionButtonsHtml = `
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="switchToSection('projects'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>📂</span> Ver Proyectos
+          </button>
+          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>⚡</span> Cotizar Solución
+          </button>
+        </div>
+      `;
+    } else if (lower.includes("agendar") || lower.includes("llamada") || lower.includes("reunión") || lower.includes("reunion") || lower.includes("meet") || lower.includes("contacto") || lower.includes("cita") || lower.includes("alejandro")) {
+      botReply = `📅 **Discovery Call Técnica 1-a-1 con Alejandro:**\n\n• Sesión interactiva de **30 minutos** vía Google Meet.\n• Analizamos requerimientos, viabilidad arquitectónica, cronograma e inversión precisa.\n• Sin costo y sin compromiso comercial.`;
       actionButtonsHtml = `
         <div class="flex flex-wrap gap-2 pt-2">
           <button onclick="openMeetingModal()" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
@@ -5049,8 +5129,8 @@ async function handleSendCopilotMessage(e, presetText) {
           </button>
         </div>
       `;
-    } else if (lower.includes("ticket") || lower.includes("soporte") || lower.includes("falla") || lower.includes("problema") || lower.includes("bug")) {
-      botReply = `🎫 **Mesa de Ayuda & Soporte Técnico SLA:**\n\n• Cualquier cliente o usuario puede reportar requerimientos o incidencias.\n• Notificación en tiempo real a **alejandrobelno964@gmail.com**.\n• Tiempos de respuesta: Crítico (< 4h) | Alto (< 12h) | Medio (< 24h).`;
+    } else if (lower.includes("ticket") || lower.includes("soporte") || lower.includes("falla") || lower.includes("problema") || lower.includes("bug") || lower.includes("ayuda")) {
+      botReply = `🎫 **Mesa de Ayuda & Soporte SLA:**\n\n• Puedes registrar cualquier incidencia o solicitud en nuestro HelpDesk.\n• Alerta instantánea a la guardia de ingeniería en **alejandrobelno964@gmail.com**.\n• Seguimiento por ID de ticket y notificaciones de estado en tiempo real.`;
       actionButtonsHtml = `
         <div class="flex flex-wrap gap-2 pt-2">
           <button onclick="openCreateTicketModal()" class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
@@ -5061,18 +5141,45 @@ async function handleSendCopilotMessage(e, presetText) {
           </button>
         </div>
       `;
-    } else {
-      botReply = `¡Hola! Soy **Kunkurt Copilot**. Estoy entrenado en toda la plataforma tecnológica de Kunkurt Devs.\n\nPuedes cotizar soluciones de software, revisar métodos de pago con anticipo del 50%, agendar una videollamada de ingeniería o abrir un ticket de soporte.`;
+    } else if (lower.includes("tecnologia") || lower.includes("tecnología") || lower.includes("stack") || lower.includes("arquitectura") || lower.includes("docker") || lower.includes("fastapi") || lower.includes("react") || lower.includes("rag") || lower.includes("ia") || lower.includes("base de datos")) {
+      botReply = `🛠️ **Stack Tecnológico Corporativo en Kunkurt Devs:**\n\n• **Backend & APIs:** Python 3.11+ (FastAPI, AsyncIO, Uvicorn), Node.js, Go.\n• **Bases de Datos & Caché:** PostgreSQL, SQLite WAL, Redis Cache, ChromaDB.\n• **Frontend:** JavaScript Moderno (ES6+), React/Next, Tailwind CSS, WebSockets.\n• **DevOps & Infra:** Docker, Docker Compose, Linux Ubuntu LTS, Nginx SSL, CI/CD.\n• **Inteligencia Artificial:** OpenAI API, Ollama (Llama 3 / DeepSeek local), LangChain RAG.`;
       actionButtonsHtml = `
         <div class="flex flex-wrap gap-2 pt-2">
-          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2 py-0.5 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 hover:text-white text-[10px]">
+          <button onclick="switchToSection('projects'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>📂</span> Ver Arquitectura en Proyectos
+          </button>
+          <button onclick="openMeetingModal()" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>📅</span> Consulta de Stack
+          </button>
+        </div>
+      `;
+    } else if (lower.includes("garantia") || lower.includes("garantía") || lower.includes("contrato") || lower.includes("seguridad") || lower.includes("nda") || lower.includes("confidencialidad") || lower.includes("codigo fuente") || lower.includes("código fuente")) {
+      botReply = `🛡️ **Garantías y Seguridad Contractual:**\n\n• **Propiedad Intelectual 100%:** Entregamos repositorio Git completo, dockerfiles y documentación técnica a tu nombre.\n• **Garantía Post-Lanzamiento:** 30 días de garantía sin costo para corrección de bugs o ajustes de estabilidad.\n• **Acuerdo NDA:** Firmamos acuerdos de confidencialidad antes de iniciar el proyecto.`;
+      actionButtonsHtml = `
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="openMeetingModal()" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>📅</span> Coordinar con Alejandro
+          </button>
+          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>⚡</span> Cotizar con Garantía
+          </button>
+        </div>
+      `;
+    } else {
+      botReply = `¡Hola! Soy **Kunkurt Copilot**. Estoy preparado para asistirte en todo el ecosistema de software de Kunkurt Devs.\n\nPuedes cotizar un desarrollo a medida, consultar nuestras opciones de pago (Stripe, PayPal, PSE o Cripto), agendar una Discovery Call técnica o levantar un ticket de soporte.`;
+      actionButtonsHtml = `
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600/80 hover:bg-cyan-600 border border-cyan-400 text-white text-xs font-semibold">
             ⚡ Cotizador
           </button>
-          <button onclick="openMeetingModal()" class="px-2 py-0.5 rounded-lg bg-blue-950/80 border border-blue-500/40 text-blue-300 hover:text-white text-[10px]">
+          <button onclick="openPaymentModal({ concept: 'Desarrollo Kunkurt', fullAmount: 1950, amount: 975, mode: 'deposit50' })" class="px-2.5 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 border border-emerald-400 text-white text-xs font-semibold">
+            💳 Pasarela de Pagos
+          </button>
+          <button onclick="openMeetingModal()" class="px-2.5 py-1 rounded-lg bg-blue-600/80 hover:bg-blue-600 border border-blue-400 text-white text-xs font-semibold">
             📅 Agendar Llamada
           </button>
-          <button onclick="openCreateTicketModal()" class="px-2 py-0.5 rounded-lg bg-purple-950/80 border border-purple-500/40 text-purple-300 hover:text-white text-[10px]">
-            🎫 Abrir Ticket
+          <button onclick="openCreateTicketModal()" class="px-2.5 py-1 rounded-lg bg-purple-600/80 hover:bg-purple-600 border border-purple-400 text-white text-xs font-semibold">
+            🎫 Soporte
           </button>
         </div>
       `;
