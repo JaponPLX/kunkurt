@@ -2333,12 +2333,12 @@ async function loadSmtpSettings() {
 
 async function handleSaveSmtpSettings(e) {
   if (e) e.preventDefault();
-  const host = document.getElementById("smtpHost")?.value.trim();
-  const port = document.getElementById("smtpPort")?.value.trim();
-  const user = document.getElementById("smtpUser")?.value.trim();
-  const password = document.getElementById("smtpPass")?.value.trim();
-  const sender_name = document.getElementById("smtpSenderName")?.value.trim();
-  const sender_email = document.getElementById("smtpSenderEmail")?.value.trim();
+  const host = document.getElementById("smtpHost")?.value?.trim() || "";
+  const port = document.getElementById("smtpPort")?.value?.trim() || "";
+  const user = document.getElementById("smtpUser")?.value?.trim() || "";
+  const password = document.getElementById("smtpPass")?.value?.trim() || "";
+  const sender_name = document.getElementById("smtpSenderName")?.value?.trim() || "";
+  const sender_email = document.getElementById("smtpSenderEmail")?.value?.trim() || "";
   const btn = document.getElementById("btnSaveSmtp");
 
   if (!host || !port || !user) {
@@ -2386,7 +2386,7 @@ async function handleSaveSmtpSettings(e) {
 }
 
 async function handleTestSmtp() {
-  const user = document.getElementById("smtpUser")?.value.trim();
+  const user = document.getElementById("smtpUser")?.value?.trim() || "";
   const btn = document.getElementById("btnTestSmtp");
   if (!user) {
     showToast("Ingresa tu correo Gmail en el campo correspondiente", "error");
@@ -2803,14 +2803,14 @@ function closeCreateTicketModal() {
 
 async function handleCreateTicketSubmit(e) {
   e.preventDefault();
-  const title = document.getElementById("ticketTitle")?.value.trim();
-  const category = document.getElementById("ticketCategory")?.value;
-  const priority = document.getElementById("ticketPriority")?.value;
-  const project_title = document.getElementById("ticketProjectSelect")?.value;
+  const title = document.getElementById("ticketTitle")?.value?.trim() || "";
+  const category = document.getElementById("ticketCategory")?.value || "support";
+  const priority = document.getElementById("ticketPriority")?.value || "medium";
+  const project_title = document.getElementById("ticketProjectSelect")?.value || "";
   const assigned_id = document.getElementById("ticketAssigneeSelect")?.value || null;
-  const author_name = document.getElementById("ticketAuthorName")?.value.trim();
-  const author_email = document.getElementById("ticketAuthorEmail")?.value.trim();
-  const description = document.getElementById("ticketDescription")?.value.trim();
+  const author_name = document.getElementById("ticketAuthorName")?.value?.trim() || "";
+  const author_email = document.getElementById("ticketAuthorEmail")?.value?.trim() || "";
+  const description = document.getElementById("ticketDescription")?.value?.trim() || "";
   const btn = document.getElementById("btnSubmitTicket");
 
   if (!title || !description || !author_email || !author_name) {
@@ -3224,8 +3224,14 @@ function calculateQuotation() {
     btnPayDisplay.textContent = `$${deposit50.toLocaleString("en-US")} USD`;
   }
 
-  const projectTypeName = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white")?.textContent.trim() : "Solución de Software";
-  updateWhatsAppContext(projectTypeName || "Solución Web", totalCost);
+  let projectTypeName = "Solución de Software";
+  if (selectedTypeRadio && selectedTypeRadio.parentElement) {
+    const textEl = selectedTypeRadio.parentElement.querySelector(".text-white");
+    if (textEl && textEl.textContent) {
+      projectTypeName = textEl.textContent.trim().replace(/\s+/g, " ");
+    }
+  }
+  updateWhatsAppContext(projectTypeName, totalCost);
 
   return { totalCost, totalWeeks };
 }
@@ -3579,9 +3585,9 @@ function copyCryptoVaultAddress() {
 function handleQuickPaymentForm(e) {
   e.preventDefault();
   playCyberSound("click");
-  const name = document.getElementById("quickPayName")?.value.trim() || "";
-  const email = document.getElementById("quickPayEmail")?.value.trim() || "";
-  const concept = document.getElementById("quickPayConcept")?.value.trim() || "Pago Directo Kunkurt";
+  const name = document.getElementById("quickPayName")?.value?.trim() || "";
+  const email = document.getElementById("quickPayEmail")?.value?.trim() || "";
+  const concept = document.getElementById("quickPayConcept")?.value?.trim() || "Pago Directo Kunkurt";
   const amount = parseFloat(document.getElementById("quickPayAmount")?.value || 500);
   const gateway = document.getElementById("quickPayGateway")?.value || "stripe";
 
@@ -3638,7 +3644,7 @@ async function processPaymentCheckout() {
   // Construct payment metadata based on selected gateway
   let paymentData = {};
   if (activePaymentGateway === "stripe") {
-    const cardNum = document.getElementById("stripeCardNumber")?.value.replace(/\s+/g, "") || "4242";
+    const cardNum = (document.getElementById("stripeCardNumber")?.value || "4242").replace(/\s+/g, "");
     paymentData = {
       card_last4: cardNum.slice(-4),
       card_holder: document.getElementById("stripeCardHolder")?.value || clientName,
@@ -4276,9 +4282,9 @@ async function handleSaveWebhookSettings(e) {
   e.preventDefault();
   playCyberSound("click");
 
-  const discordUrl = document.getElementById("webhookDiscordUrl")?.value.trim() || "";
-  const telegramToken = document.getElementById("webhookTelegramToken")?.value.trim() || "";
-  const telegramChatId = document.getElementById("webhookTelegramChatId")?.value.trim() || "";
+  const discordUrl = document.getElementById("webhookDiscordUrl")?.value?.trim() || "";
+  const telegramToken = document.getElementById("webhookTelegramToken")?.value?.trim() || "";
+  const telegramChatId = document.getElementById("webhookTelegramChatId")?.value?.trim() || "";
   const enabled = document.getElementById("webhookEnabledCheckbox")?.checked || false;
   const notifyTicket = document.getElementById("webhookNotifyTicket")?.checked !== false;
   const notifyLogin = document.getElementById("webhookNotifyLogin")?.checked !== false;
@@ -4775,14 +4781,14 @@ async function handleScheduleMeeting(e) {
   e.preventDefault();
   playCyberSound("click");
 
-  const name = document.getElementById("meetClientName")?.value.trim() || "";
-  const email = document.getElementById("meetClientEmail")?.value.trim() || "";
-  const company = document.getElementById("meetClientCompany")?.value.trim() || "";
+  const name = document.getElementById("meetClientName")?.value?.trim() || "";
+  const email = document.getElementById("meetClientEmail")?.value?.trim() || "";
+  const company = document.getElementById("meetClientCompany")?.value?.trim() || "";
   const timezone = document.getElementById("meetTimezone")?.value || "America/Bogota";
   const date = document.getElementById("meetDate")?.value || "";
   const time = document.getElementById("meetTime")?.value || "";
-  const topic = document.getElementById("meetTopic")?.value.trim() || "Discovery Call";
-  const notes = document.getElementById("meetNotes")?.value.trim() || "";
+  const topic = document.getElementById("meetTopic")?.value?.trim() || "Discovery Call";
+  const notes = document.getElementById("meetNotes")?.value?.trim() || "";
   const btn = document.getElementById("btnSubmitMeeting");
 
   if (!name || !email || !date || !time) {
@@ -4856,12 +4862,23 @@ async function handleScheduleMeeting(e) {
 }
 
 // ============================================================================
-// 4. GENERADOR OFICIAL DE FACTURA PROFORMA & CONTRATO PDF
+// 4. GENERADOR OFICIAL DE FACTURA PROFORMA & CONTRATO PDF (INVOICE & CONTRACT)
 // ============================================================================
 let activeDocType = "invoice";
+let wasPaymentModalOpen = false;
 
 function openInvoiceModal(opts = {}) {
   playCyberSound("click");
+
+  // If payment modal is open, remember and hide it so invoiceModal sits clean and undisturbed
+  const payModal = document.getElementById("paymentModal");
+  if (payModal && !payModal.classList.contains("hidden")) {
+    wasPaymentModalOpen = true;
+    payModal.classList.add("hidden");
+  } else {
+    wasPaymentModalOpen = false;
+  }
+
   if (opts && opts.type === "contract") {
     activeDocType = "contract";
     const btnInv = document.getElementById("docToggleInvoiceBtn");
@@ -4880,7 +4897,12 @@ function openInvoiceModal(opts = {}) {
   if (!modal) return;
   document.getElementById("copilotChatWindow")?.classList.add("hidden");
 
-  renderInvoiceOrContract();
+  try {
+    renderInvoiceOrContract();
+  } catch (err) {
+    console.warn("Aviso al renderizar documento:", err);
+  }
+
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -4888,10 +4910,15 @@ function openInvoiceModal(opts = {}) {
 function closeInvoiceModal() {
   playCyberSound("click");
   const modal = document.getElementById("invoiceModal");
-  if (!modal) return;
-  document.getElementById("copilotChatWindow")?.classList.add("hidden");
-  modal.classList.add("hidden");
-  document.body.style.overflow = "auto";
+  if (modal) modal.classList.add("hidden");
+
+  if (wasPaymentModalOpen) {
+    const payModal = document.getElementById("paymentModal");
+    if (payModal) payModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  } else {
+    document.body.style.overflow = "auto";
+  }
 }
 
 function toggleDocType(type) {
@@ -4911,29 +4938,82 @@ function toggleDocType(type) {
   renderInvoiceOrContract();
 }
 
+function downloadInvoiceDocumentFile() {
+  playCyberSound("click");
+  const box = document.getElementById("printableDocumentBox");
+  if (!box) {
+    showToast("No se pudo obtener el contenido del documento", "error");
+    return;
+  }
+
+  const title = activeDocType === "contract" ? "Kunkurt_Devs_Contrato_Oficial_SLA" : "Kunkurt_Devs_Factura_Proforma";
+  const docHtml = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>${escapeHTML(title)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #ffffff; color: #0f172a; padding: 40px; margin: 0; line-height: 1.6; }
+    .doc-wrapper { max-width: 820px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; padding: 36px; box-shadow: 0 4px 25px rgba(0,0,0,0.07); }
+    @media print { body { padding: 0; } .doc-wrapper { border: none; box-shadow: none; padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="doc-wrapper">
+    ${box.innerHTML}
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([docHtml], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${title}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("📥 ¡Documento oficial descargado satisfactoriamente!", "success");
+}
+
 function renderInvoiceOrContract() {
   const box = document.getElementById("printableDocumentBox");
   if (!box) return;
 
-  const payName = document.getElementById("payClientName")?.value.trim();
-  const payEmail = document.getElementById("payClientEmail")?.value.trim();
-  const quoteName = document.getElementById("quoteClientName")?.value.trim();
-  const quoteEmail = document.getElementById("quoteClientEmail")?.value.trim();
-  const quoteCompany = document.getElementById("quoteClientCompany")?.value.trim();
+  const payName = document.getElementById("payClientName")?.value?.trim() || "";
+  const payEmail = document.getElementById("payClientEmail")?.value?.trim() || "";
+  const quoteName = document.getElementById("quoteClientName")?.value?.trim() || "";
+  const quoteEmail = document.getElementById("quoteClientEmail")?.value?.trim() || "";
+  const quoteCompany = document.getElementById("quoteClientCompany")?.value?.trim() || "";
 
   const clientName = payName || quoteName || (currentProfile && currentProfile.full_name) || "Cliente Corporativo";
   const clientEmail = payEmail || quoteEmail || (currentProfile && currentProfile.email) || "contacto@empresa.com";
   const clientCompany = quoteCompany || "Nexus Tech Latam";
 
   const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
-  const quoteType = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white").textContent.trim() : "Plataforma de Software Full-Stack";
+  let quoteType = "Plataforma de Software Full-Stack";
+  if (selectedTypeRadio && selectedTypeRadio.parentElement) {
+    const textEl = selectedTypeRadio.parentElement.querySelector(".text-white");
+    if (textEl && textEl.textContent) {
+      quoteType = textEl.textContent.trim().replace(/\s+/g, " ");
+    }
+  }
   const projectType = (typeof paymentCurrentConcept !== "undefined" && paymentCurrentConcept) ? paymentCurrentConcept : quoteType;
 
-  const quoteCalc = calculateQuotation();
-  const totalCost = (typeof paymentCurrentFullAmount !== "undefined" && paymentCurrentFullAmount > 0)
-    ? paymentCurrentFullAmount
-    : (quoteCalc.totalCost || 1950);
-  const totalWeeks = quoteCalc.totalWeeks || 4;
+  let totalCost = 290;
+  let totalWeeks = 1;
+  try {
+    const quoteCalc = calculateQuotation();
+    if (quoteCalc) {
+      totalCost = quoteCalc.totalCost || 290;
+      totalWeeks = quoteCalc.totalWeeks || 1;
+    }
+  } catch (e) {}
+
+  if (typeof paymentCurrentFullAmount !== "undefined" && paymentCurrentFullAmount > 0) {
+    totalCost = paymentCurrentFullAmount;
+  }
   const deposit = (typeof paymentCurrentAmount !== "undefined" && paymentCurrentAmount > 0)
     ? paymentCurrentAmount
     : Math.round(totalCost * 0.5);
@@ -5441,7 +5521,17 @@ function updateWhatsAppContext(projectType, cost) {
   btn.href = `https://wa.me/573100000000?text=${text}`;
 }
 
+// Quick tools dropdown toggle
+function toggleQuickToolsDropdown() {
+  playCyberSound("click");
+  const el = document.getElementById("quickToolsDropdown");
+  if (!el) return;
+  el.classList.toggle("hidden");
+}
+
 // Window Exports for new features
+window.toggleQuickToolsDropdown = toggleQuickToolsDropdown;
+window.downloadInvoiceDocumentFile = downloadInvoiceDocumentFile;
 window.setLanguage = setLanguage;
 window.openStatusModal = openStatusModal;
 window.closeStatusModal = closeStatusModal;

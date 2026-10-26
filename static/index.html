@@ -63,137 +63,154 @@
 
     <!-- ====================================================================== -->
     <!-- ====================================================================== -->
-    <!-- HIGH-END CYBER SAAS NAVBAR (BALANCED, CENTERED NAV & PERSISTENT STICKY) -->
+    <!-- PAWINGTON-INSPIRED HIGH-END CYBER NAVBAR (CLEAN, SPACIOUS & PERSISTENT STICKY) -->
     <!-- ====================================================================== -->
-    <header id="mainAppHeader" class="sticky top-0 z-50 w-full border-b border-cyan-500/20 bg-[#07090e]/95 backdrop-blur-2xl shadow-[0_4px_30px_rgba(0,0,0,0.6)] transition-all">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header id="mainAppHeader" class="sticky top-0 z-40 w-full border-b border-white/10 bg-[#07090e]/90 backdrop-blur-2xl shadow-[0_10px_35px_rgba(0,0,0,0.7)] transition-all select-none">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
         
-        <!-- Left: Custom Cybernetic Kunkurt SVG Logo + Brand -->
-        <div class="flex items-center gap-3 shrink-0 cursor-pointer group select-none" onclick="switchToSection('projects')">
-          <!-- Cyber Vector Hexagon 'K' Logo -->
+        <!-- Left: Custom Cybernetic Kunkurt SVG Logo + Brand Name -->
+        <div class="flex items-center gap-3.5 shrink-0 cursor-pointer group" onclick="switchToSection('projects')">
+          <!-- Geometric Isometric 3D 'K' Studio Monogram -->
           <div class="relative flex items-center justify-center">
-            <svg class="w-9 h-9 shrink-0 transition-transform duration-300 group-hover:scale-105" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div class="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 opacity-30 group-hover:opacity-75 blur transition duration-300"></div>
+            <svg class="relative w-11 h-11 shrink-0 transition-transform duration-300 group-hover:scale-105" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="kunkurtLogoGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                <linearGradient id="kkShieldGrad" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stop-color="#06b6d4" />
-                  <stop offset="50%" stop-color="#3b82f6" />
-                  <stop offset="100%" stop-color="#a855f7" />
+                  <stop offset="50%" stop-color="#10b981" />
+                  <stop offset="100%" stop-color="#8b5cf6" />
                 </linearGradient>
-                <linearGradient id="kCoreGrad" x1="12" y1="10" x2="28" y2="30" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#22d3ee" />
-                  <stop offset="100%" stop-color="#c084fc" />
+                <linearGradient id="kkKLetterGrad" x1="14" y1="12" x2="34" y2="36" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#38bdf8" />
+                  <stop offset="100%" stop-color="#34d399" />
                 </linearGradient>
-                <filter id="kNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#06b6d4" flood-opacity="0.6"/>
+                <filter id="kkGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#06b6d4" flood-opacity="0.6"/>
                 </filter>
               </defs>
-              <!-- Hexagonal Cyber Shield -->
-              <polygon points="20,3 35,11.5 35,28.5 20,37 5,28.5 5,11.5" fill="#090d19" stroke="url(#kunkurtLogoGrad)" stroke-width="2" filter="url(#kNeonGlow)"/>
-              <!-- Tech Circuit Lines -->
-              <path d="M20 3V10M35 11.5L29 15M35 28.5L29 25M20 37V30M5 28.5L11 25M5 11.5L11 15" stroke="#06b6d4" stroke-opacity="0.3" stroke-width="1.2"/>
-              <!-- Futuristic Geometric K -->
-              <path d="M14 11V29" stroke="url(#kCoreGrad)" stroke-width="3" stroke-linecap="round"/>
-              <path d="M14 20L25 11" stroke="url(#kCoreGrad)" stroke-width="3" stroke-linecap="round"/>
-              <path d="M18.5 16.5L26 29" stroke="url(#kCoreGrad)" stroke-width="3" stroke-linecap="round"/>
-              <!-- Quantum Energy Core Point -->
-              <circle cx="20" cy="20" r="2" fill="#38bdf8"/>
+              <!-- Outer Rounded Hexagon / Diamond Crest -->
+              <rect x="6" y="6" width="36" height="36" rx="11" fill="#0b0f19" stroke="url(#kkShieldGrad)" stroke-width="2.2" filter="url(#kkGlow)"/>
+              <!-- Tech Circuit Matrix Accents -->
+              <circle cx="12" cy="12" r="1.5" fill="#06b6d4" opacity="0.8"/>
+              <circle cx="36" cy="12" r="1.5" fill="#10b981" opacity="0.8"/>
+              <circle cx="12" cy="36" r="1.5" fill="#8b5cf6" opacity="0.8"/>
+              <circle cx="36" cy="36" r="1.5" fill="#06b6d4" opacity="0.8"/>
+              <!-- Futuristic Angular 'K' Monogram -->
+              <path d="M17 14V34" stroke="url(#kkKLetterGrad)" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M17 24L29 14" stroke="url(#kkKLetterGrad)" stroke-width="3.5" stroke-linecap="round"/>
+              <path d="M22 20L31 34" stroke="url(#kkKLetterGrad)" stroke-width="3.5" stroke-linecap="round"/>
+              <!-- Glowing Quantum Core -->
+              <circle cx="24" cy="24" r="2" fill="#ffffff" filter="url(#kkGlow)"/>
             </svg>
           </div>
 
-          <div class="flex items-center gap-2">
-            <span class="text-white font-extrabold text-base tracking-tight font-['Plus_Jakarta_Sans'] group-hover:text-cyan-200 transition-colors">
-              Kunkurt <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Devs</span>
-            </span>
-            <span class="px-1.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
-              v2.8
-            </span>
+          <div class="flex flex-col">
+            <div class="flex items-center gap-1.5">
+              <span class="text-white font-extrabold text-lg tracking-tight font-['Plus_Jakarta_Sans',sans-serif]">
+                Kunkurt<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400">Devs</span>
+              </span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-pulse"></span>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400 tracking-wider uppercase hidden sm:block">Software Engineering & POS</span>
           </div>
         </div>
 
-        <!-- Center: Airy, Centered Navigation Bar (Matching Reference Layout) -->
-        <nav class="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-slate-300">
-          <button id="navLinkProjects" onclick="switchToSection('projects')" class="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all">
+        <!-- Center: Elegant, Airy Navigation (Pawington Architecture) -->
+        <nav class="hidden md:flex items-center gap-6 lg:gap-8 text-[13px] font-medium text-slate-300">
+          <button id="navLinkProjects" onclick="switchToSection('projects')" class="hover:text-white transition-colors cursor-pointer py-1">
+            Inicio
+          </button>
+          <button onclick="switchToSection('projects')" class="hover:text-white transition-colors cursor-pointer py-1">
             Proyectos
           </button>
-          <button id="navLinkQuote" onclick="switchToSection('quotation')" class="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all">
+          <button onclick="switchToSection('quotation'); setTimeout(() => { const el = document.getElementById('quoteProjectTypeContainer'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100)" class="hover:text-emerald-300 transition-colors cursor-pointer py-1 flex items-center gap-1.5">
+            <span>Sistemas POS</span>
+            <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">PYMES</span>
+          </button>
+          <button id="navLinkQuote" onclick="switchToSection('quotation')" class="hover:text-white transition-colors cursor-pointer py-1">
             Cotizador
           </button>
-          <button id="navTicketsBtn" onclick="switchToSection('tickets')" class="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all flex items-center gap-1.5">
+          <button id="navTicketsBtn" onclick="switchToSection('tickets')" class="hover:text-white transition-colors cursor-pointer py-1 flex items-center gap-1.5">
             <span id="navLinkTickets">Tickets</span>
-            <span id="navTicketsBadge" class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">0</span>
+            <span id="navTicketsBadge" class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">0</span>
           </button>
-          <button id="navLinkAnalytics" onclick="switchToSection('analytics')" class="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all">
+          <button id="navLinkAnalytics" onclick="switchToSection('analytics')" class="hover:text-white transition-colors cursor-pointer py-1">
             Métricas
           </button>
-          <button id="navLinkWiki" onclick="switchToSection('wiki')" class="px-3.5 py-1.5 rounded-full hover:text-white hover:bg-white/[0.08] transition-all">
+          <button id="navLinkWiki" onclick="switchToSection('wiki')" class="hover:text-white transition-colors cursor-pointer py-1">
             Wiki
           </button>
         </nav>
 
-        <!-- Right: Actions, Command Palette, Language & Prominent CTA Pill -->
-        <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Right: Direct Phone/WhatsApp, Prominent Rounded Pill CTA & Profile -->
+        <div class="flex items-center gap-3 sm:gap-4 lg:gap-5">
           
-          <!-- Command Palette Trigger (⌘K) -->
-          <button onclick="openCommandPalette()" class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-cyan-400 text-xs text-slate-300 hover:text-white transition-all cursor-pointer shadow-sm" title="Paleta de Comandos Rápida (Ctrl+K)">
-            <span class="text-cyan-400 font-bold font-mono">⌘K</span>
-            <span class="text-[10px] text-slate-400 hidden xl:inline">Buscar</span>
-          </button>
+          <!-- Direct WhatsApp / Phone Contact with Icon (Matching Pawington phone link) -->
+          <a href="https://wa.me/573100000000?text=Hola%20Alejandro,%20quisiera%20cotizar%20un%20proyecto%20o%20sistema%20POS%20con%20Kunkurt%20Devs" target="_blank" rel="noopener" class="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-emerald-400 transition-colors group cursor-pointer" title="Contacto Directo WhatsApp">
+            <span class="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-500/20 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+            </span>
+            <span class="font-mono text-xs text-slate-200 group-hover:text-white">(+57) 310 000 0000</span>
+          </a>
 
-          <!-- Uptime SLA Micro-Pill -->
-          <button onclick="openStatusModal()" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 hover:border-emerald-400 transition-all cursor-pointer" title="Ver Radar de Servicios & Uptime">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="navUptimeBadge">99.98%</span>
-          </button>
-
-          <!-- Language Selector Switcher (ES / EN) -->
-          <div class="flex items-center border border-white/10 rounded-xl bg-white/5 p-0.5 text-[10px] font-bold">
-            <button onclick="setLanguage('es')" id="langBtn_es" class="px-2 py-0.5 rounded-lg bg-cyan-500 text-black font-extrabold transition-all" title="Español">ES</button>
-            <button onclick="setLanguage('en')" id="langBtn_en" class="px-2 py-0.5 rounded-lg text-slate-300 hover:text-white transition-all" title="English">EN</button>
-          </div>
-
-          <!-- Quick Utility Icons (SFX Audio, Notifications & Settings) -->
-          <div class="hidden sm:flex items-center gap-1 border-l border-white/10 pl-2">
-            <!-- Audio SFX Toggle -->
-            <button onclick="toggleCyberAudio()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors" title="Efectos de Sonido Cyber (ON/OFF)">
-              <span id="navAudioIcon" class="text-xs">🔊</span>
-            </button>
-
-            <!-- Notifications Bell -->
-            <div class="relative">
-              <button onclick="toggleNotificationsDropdown()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors relative" title="Notificaciones en vivo">
-                <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-                <span id="notifBadge" class="hidden absolute top-0.5 right-0.5 w-2 h-2 bg-cyan-400 rounded-full animate-ping"></span>
-              </button>
-              <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 p-4 rounded-2xl border border-white/15 shadow-[0_0_50px_rgba(0,0,0,0.8)] z-50 bg-[#0a0e17]/95 backdrop-blur-xl">
-                <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-                  <span class="text-xs font-bold text-white uppercase tracking-wider">Centro de Notificaciones</span>
-                  <span class="text-[10px] text-cyan-400 font-mono">Live Feed</span>
-                </div>
-                <div id="notifListContainer" class="space-y-2 max-h-72 overflow-y-auto"></div>
-              </div>
-            </div>
-
-            <!-- Subtle Settings & Tools Hub Trigger -->
-            <button onclick="openToolsModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors" title="Herramientas, Roles & Integraciones">
-              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
-          </div>
-
-          <!-- Prominent CTA Action (Matching the "Book Now" Pill from Reference) -->
-          <button onclick="openMeetingModal()" class="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-cyan-500 via-teal-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-[0_0_20px_rgba(6,182,212,0.35)] hover:shadow-[0_0_25px_rgba(6,182,212,0.55)] transition-all whitespace-nowrap">
-            <span>📅</span>
-            <span>Agendar Llamada</span>
+          <!-- Prominent Rounded Solid Pill CTA Button (Matching Pawington 'Book Now') -->
+          <button onclick="switchToSection('quotation')" class="px-5 py-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] transition-all whitespace-nowrap transform active:scale-95 cursor-pointer">
+            Cotizar Proyecto
           </button>
 
           <!-- User Profile / Auth Pill -->
-          <button id="navLoginBtn" onclick="openLoginModal()" class="px-4 py-1.5 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 hover:border-cyan-400 text-white font-semibold text-xs tracking-wider uppercase transition-all backdrop-blur-md">
+          <button id="navLoginBtn" onclick="openLoginModal()" class="px-4 py-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/15 hover:border-cyan-400 text-white font-semibold text-xs tracking-wider uppercase transition-all backdrop-blur-md">
             ACCEDER
           </button>
           
-          <div id="navLogoutBtn" onclick="openUserProfileModal()" class="hidden items-center gap-2 cursor-pointer group px-2.5 py-1 rounded-full bg-white/5 border border-white/10 hover:border-cyan-400 transition-all">
+          <div id="navLogoutBtn" onclick="openUserProfileModal()" class="hidden items-center gap-2 cursor-pointer group px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-cyan-400 transition-all">
             <img id="currentUserAvatar" src="https://avatars.githubusercontent.com/u/171938813?v=4" alt="Avatar" class="w-6 h-6 rounded-full object-cover ring-1 ring-cyan-400">
-            <span id="currentUserName" class="text-xs font-bold text-white leading-tight">JaponPLX</span>
+            <span id="currentUserName" class="text-xs font-bold text-white leading-tight">Alejandro</span>
             <span id="currentUserRoleBadge" class="text-[9px] font-semibold text-cyan-300 font-mono px-1.5 py-0.2 rounded-full bg-cyan-950/80 border border-cyan-500/30">Admin</span>
+          </div>
+
+          <!-- Clean 3-Dots Quick Settings & Tools Dropdown (Keeps the Bar Uncluttered) -->
+          <div class="relative">
+            <button onclick="toggleQuickToolsDropdown()" class="p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors" title="Ajustes rápidos & Herramientas">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+            </button>
+            <div id="quickToolsDropdown" class="hidden absolute right-0 mt-3 w-64 p-3 rounded-2xl border border-white/15 shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-50 bg-[#0a0e17]/95 backdrop-blur-xl space-y-2">
+              <!-- Uptime status -->
+              <button onclick="openStatusModal(); toggleQuickToolsDropdown()" class="w-full flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-colors">
+                <span class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Radar Uptime de Servicios
+                </span>
+                <span id="navUptimeBadge" class="text-emerald-400 font-mono text-[10px]">99.98%</span>
+              </button>
+
+              <!-- Language selector -->
+              <div class="flex items-center justify-between p-2 rounded-xl bg-white/5 text-xs text-slate-300">
+                <span>Idioma</span>
+                <div class="flex items-center border border-white/10 rounded-lg bg-black/40 p-0.5 text-[10px]">
+                  <button onclick="setLanguage('es')" id="langBtn_es" class="px-2 py-0.5 rounded bg-cyan-500 text-black font-bold">ES</button>
+                  <button onclick="setLanguage('en')" id="langBtn_en" class="px-2 py-0.5 rounded text-slate-300 hover:text-white">EN</button>
+                </div>
+              </div>
+
+              <!-- SFX sound toggle -->
+              <button onclick="toggleCyberAudio()" class="w-full flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-colors">
+                <span>Efectos de Sonido</span>
+                <span id="navAudioIcon" class="text-xs">🔊 ON</span>
+              </button>
+
+              <!-- Search command palette -->
+              <button onclick="openCommandPalette(); toggleQuickToolsDropdown()" class="w-full flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-colors">
+                <span>Buscar proyectos (⌘K)</span>
+                <span class="text-cyan-400 font-mono text-[10px]">Ctrl+K</span>
+              </button>
+
+              <!-- Administration & Tools -->
+              <button onclick="openToolsModal(); toggleQuickToolsDropdown()" class="w-full flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-slate-300 hover:text-white transition-colors">
+                <span>Panel de Roles & SMTP</span>
+                <span class="text-cyan-400 text-xs">⚙️</span>
+              </button>
+            </div>
           </div>
 
         </div>
@@ -2925,8 +2942,8 @@
   <!-- ====================================================================== -->
   <!-- MODAL: GENERADOR DE FACTURA PROFORMA & CONTRATO PDF (INVOICE & CONTRACT) -->
   <!-- ====================================================================== -->
-  <div id="invoiceModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
-    <div class="glass-panel modal-content rounded-3xl border border-cyan-500/40 w-full max-w-3xl bg-[#090b14]/95 p-6 sm:p-8 space-y-5 shadow-[0_0_60px_rgba(6,182,212,0.3)]">
+  <div id="invoiceModal" class="hidden fixed inset-0 z-[80] overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-cyan-500/40 w-full max-w-3xl bg-[#090b14]/98 p-6 sm:p-8 space-y-5 shadow-[0_0_80px_rgba(6,182,212,0.4)]">
       
       <!-- Modal Top Controls -->
       <div class="flex items-center justify-between pb-3 border-b border-cyan-900/40">
@@ -2938,10 +2955,13 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button onclick="printInvoiceDocument()" class="btn-neon text-xs py-1.5 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 flex items-center gap-1.5">
-            <span>🖨️</span> Descargar / Imprimir PDF
+          <button onclick="downloadInvoiceDocumentFile()" class="btn-ghost-neon text-xs py-1.5 px-3 border-emerald-500/50 text-emerald-300 hover:text-white flex items-center gap-1.5 cursor-pointer" title="Descargar archivo en tu PC">
+            <span>📥</span> Descargar (.HTML / Doc)
           </button>
-          <button onclick="closeInvoiceModal()" class="text-slate-400 hover:text-white p-2 text-lg">✕</button>
+          <button onclick="printInvoiceDocument()" class="btn-neon text-xs py-1.5 px-3 bg-gradient-to-r from-cyan-600 to-blue-600 flex items-center gap-1.5 cursor-pointer">
+            <span>🖨️</span> Imprimir / PDF
+          </button>
+          <button onclick="closeInvoiceModal()" class="text-slate-400 hover:text-white p-2 text-lg cursor-pointer">✕</button>
         </div>
       </div>
 
