@@ -4,6 +4,148 @@
  * Connects directly to JaponPLX GitHub Repositories.
  */
 
+// ============================================================================
+// CORE SYSTEM UTILITIES & VISUAL ENGINES (ESCAPING, CLIPBOARD, CONFETTI, USER)
+// ============================================================================
+function escapeHTML(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+function escapeHtml(str) { return escapeHTML(str); }
+
+function copyTextToClipboard(text) {
+  if (!text) return;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+  function fallbackCopy(val) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = val;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    } catch (e) {}
+  }
+}
+
+function triggerCyberConfetti() {
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.style.position = "fixed";
+    canvas.style.top = "0";
+    canvas.style.left = "0";
+    canvas.style.width = "100vw";
+    canvas.style.height = "100vh";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "999999";
+    document.body.appendChild(canvas);
+
+    canvas.width = window.innerWidth || 1200;
+    canvas.height = window.innerHeight || 800;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { canvas.remove(); return; }
+
+    const colors = ["#22d3ee", "#34d399", "#a855f7", "#ec4899", "#38bdf8", "#fbbf24"];
+    const particles = Array.from({ length: 65 }, () => ({
+      x: canvas.width * 0.5 + (Math.random() - 0.5) * 220,
+      y: canvas.height * 0.35 + (Math.random() - 0.5) * 80,
+      vx: (Math.random() - 0.5) * 14,
+      vy: Math.random() * -10 - 4,
+      size: Math.random() * 6 + 4,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: 1,
+      decay: Math.random() * 0.02 + 0.012
+    }));
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.32;
+        p.alpha -= p.decay;
+        if (p.alpha > 0) {
+          alive = true;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+          ctx.restore();
+        }
+      }
+      if (alive) {
+        requestAnimationFrame(render);
+      } else {
+        canvas.remove();
+      }
+    }
+    render();
+    setTimeout(() => { if (canvas.parentElement) canvas.remove(); }, 3500);
+  } catch (e) {
+    console.warn("Confetti effect bypass:", e);
+  }
+}
+
+function getCurrentUser() {
+  if (typeof activeProfile !== "undefined" && activeProfile && activeProfile.name) {
+    return activeProfile;
+  }
+  if (typeof currentProfile !== "undefined" && currentProfile && currentProfile.name) {
+    return currentProfile;
+  }
+  try {
+    const saved = localStorage.getItem("kunkurt_active_profile");
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  if (typeof PROFILES !== "undefined" && typeof currentRole !== "undefined" && PROFILES[currentRole]) {
+    return PROFILES[currentRole];
+  }
+  return {
+    id: 99,
+    username: "cliente",
+    name: "Cliente Kunkurt",
+    email: "cliente@kunkurt.com",
+    role: "client"
+  };
+}
+
+function formatTimeAgo(dateInput) {
+  if (!dateInput) return "Reciente";
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return String(dateInput);
+  const now = new Date();
+  const diffSec = Math.floor((now - date) / 1000);
+  if (diffSec < 60) return "Hace un momento";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `Hace ${diffMin} min`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `Hace ${diffHours} h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "Ayer";
+  if (diffDays < 30) return `Hace ${diffDays} días`;
+  return date.toLocaleDateString("es-ES", { month: "short", day: "numeric" });
+}
+
+window.escapeHTML = escapeHTML;
+window.escapeHtml = escapeHtml;
+window.copyTextToClipboard = copyTextToClipboard;
+window.triggerCyberConfetti = triggerCyberConfetti;
+window.getCurrentUser = getCurrentUser;
+window.formatTimeAgo = formatTimeAgo;
+
 // Verified founding profiles (CERO personas falsas - Solo el Administrador Real)
 const PROFILES = {
   admin: {
@@ -3046,8 +3188,8 @@ function playCyberSound(type = "click") {
 // ============================================================================
 function calculateQuotation() {
   const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
-  const baseCost = selectedTypeRadio ? parseFloat(selectedTypeRadio.dataset.baseCost || 1200) : 1200;
-  const baseWeeks = selectedTypeRadio ? parseInt(selectedTypeRadio.dataset.baseWeeks || 3) : 3;
+  const baseCost = selectedTypeRadio ? parseFloat(selectedTypeRadio.dataset.baseCost || 290) : 290;
+  const baseWeeks = selectedTypeRadio ? parseInt(selectedTypeRadio.dataset.baseWeeks || 1) : 1;
 
   let totalCost = baseCost;
   let totalWeeks = baseWeeks;
@@ -3180,10 +3322,10 @@ async function submitQuotationForm(e) {
 // PASARELAS DE PAGO & CHECKOUT GLOBAL CONTROLLER
 // ============================================================================
 let activePaymentGateway = "stripe";
-let paymentCurrentFullAmount = 1950;
-let paymentCurrentAmount = 975;
+let paymentCurrentFullAmount = 460;
+let paymentCurrentAmount = 230;
 let paymentCurrentMode = "deposit50";
-let paymentCurrentConcept = "Anticipo de Proyecto";
+let paymentCurrentConcept = "Anticipo 50% - Sistema POS & Facturación Pyme";
 
 function payQuotationDeposit() {
   playCyberSound("click");
@@ -3223,6 +3365,7 @@ function payQuotationDeposit() {
 
 function openPaymentModal(opts = {}) {
   playCyberSound("click");
+  document.getElementById("copilotChatWindow")?.classList.add("hidden");
   const modal = document.getElementById("paymentModal");
   if (!modal) return;
 
@@ -4719,8 +4862,23 @@ let activeDocType = "invoice";
 
 function openInvoiceModal(opts = {}) {
   playCyberSound("click");
+  if (opts && opts.type === "contract") {
+    activeDocType = "contract";
+    const btnInv = document.getElementById("docToggleInvoiceBtn");
+    const btnCtr = document.getElementById("docToggleContractBtn");
+    if (btnInv) btnInv.className = "py-2 rounded-lg font-bold transition-all text-slate-400 hover:text-white";
+    if (btnCtr) btnCtr.className = "py-2 rounded-lg font-bold transition-all bg-cyan-600 text-white shadow";
+  } else if (opts && opts.type === "invoice") {
+    activeDocType = "invoice";
+    const btnInv = document.getElementById("docToggleInvoiceBtn");
+    const btnCtr = document.getElementById("docToggleContractBtn");
+    if (btnInv) btnInv.className = "py-2 rounded-lg font-bold transition-all bg-cyan-600 text-white shadow";
+    if (btnCtr) btnCtr.className = "py-2 rounded-lg font-bold transition-all text-slate-400 hover:text-white";
+  }
+
   const modal = document.getElementById("invoiceModal");
   if (!modal) return;
+  document.getElementById("copilotChatWindow")?.classList.add("hidden");
 
   renderInvoiceOrContract();
   modal.classList.remove("hidden");
@@ -4731,6 +4889,7 @@ function closeInvoiceModal() {
   playCyberSound("click");
   const modal = document.getElementById("invoiceModal");
   if (!modal) return;
+  document.getElementById("copilotChatWindow")?.classList.add("hidden");
   modal.classList.add("hidden");
   document.body.style.overflow = "auto";
 }
@@ -4756,15 +4915,29 @@ function renderInvoiceOrContract() {
   const box = document.getElementById("printableDocumentBox");
   if (!box) return;
 
-  const clientName = document.getElementById("quoteClientName")?.value.trim() || (currentProfile ? currentProfile.full_name : "Cliente Corporativo");
-  const clientEmail = document.getElementById("quoteClientEmail")?.value.trim() || (currentProfile ? currentProfile.email : "contacto@empresa.com");
-  const clientCompany = document.getElementById("quoteClientCompany")?.value.trim() || "Nexus Tech Latam";
+  const payName = document.getElementById("payClientName")?.value.trim();
+  const payEmail = document.getElementById("payClientEmail")?.value.trim();
+  const quoteName = document.getElementById("quoteClientName")?.value.trim();
+  const quoteEmail = document.getElementById("quoteClientEmail")?.value.trim();
+  const quoteCompany = document.getElementById("quoteClientCompany")?.value.trim();
+
+  const clientName = payName || quoteName || (currentProfile && currentProfile.full_name) || "Cliente Corporativo";
+  const clientEmail = payEmail || quoteEmail || (currentProfile && currentProfile.email) || "contacto@empresa.com";
+  const clientCompany = quoteCompany || "Nexus Tech Latam";
 
   const selectedTypeRadio = document.querySelector('input[name="quoteProjectType"]:checked');
-  const projectType = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white").textContent.trim() : "Plataforma de Software Full-Stack";
+  const quoteType = selectedTypeRadio ? selectedTypeRadio.parentElement.querySelector(".text-white").textContent.trim() : "Plataforma de Software Full-Stack";
+  const projectType = (typeof paymentCurrentConcept !== "undefined" && paymentCurrentConcept) ? paymentCurrentConcept : quoteType;
 
-  const { totalCost, totalWeeks } = calculateQuotation();
-  const deposit = Math.round(totalCost * 0.5);
+  const quoteCalc = calculateQuotation();
+  const totalCost = (typeof paymentCurrentFullAmount !== "undefined" && paymentCurrentFullAmount > 0)
+    ? paymentCurrentFullAmount
+    : (quoteCalc.totalCost || 1950);
+  const totalWeeks = quoteCalc.totalWeeks || 4;
+  const deposit = (typeof paymentCurrentAmount !== "undefined" && paymentCurrentAmount > 0)
+    ? paymentCurrentAmount
+    : Math.round(totalCost * 0.5);
+
   const now = new Date();
   const dateStr = now.toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" });
   const docCode = `INV-${now.getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -5072,15 +5245,27 @@ async function handleSendCopilotMessage(e, presetText) {
           </button>
         </div>
       `;
+    } else if (lower.includes("pos") || lower.includes("punto de venta") || lower.includes("factura") || lower.includes("inventario") || lower.includes("caja") || lower.includes("cuadre") || lower.includes("ticket") || lower.includes("tienda") || lower.includes("emprended")) {
+      botReply = `🛒 **Sistemas POS & Facturación para Pequeños Negocios y Emprendedores:**\n\nDesarrollamos soluciones de Punto de Venta (POS) rápidas, económicas y fáciles de usar:\n• ⚡ **Ventas en Caja:** Registro ágil en segundos con efectivo, tarjetas y transferencias.\n• 📦 **Control de Inventario:** Control de stock en tiempo real y alertas de productos agotándose.\n• 🖨️ **Impresión de Tickets:** Compatible con impresoras térmicas (58/80mm) y lectores de barras.\n• 📊 **Cuadre de Caja Diario:** Reporte de ventas totales y ganancias por turno.\n• 🔌 **Modo Offline:** Funciona incluso si no hay internet gracias a SQLite local.\n\n💡 **Inversión súper accesible:** Desde **$290 USD** (Anticipo 50%: **$145 USD**).`;
+      actionButtonsHtml = `
+        <div class="flex flex-wrap gap-2 pt-2">
+          <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>🛒</span> Cotizar Sistema POS
+          </button>
+          <button onclick="openPaymentModal({ concept: 'Anticipo 50% - Sistema POS Pyme', fullAmount: 290, amount: 145, mode: 'deposit50' })" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
+            <span>💳</span> Pagar Anticipo ($145 USD)
+          </button>
+        </div>
+      `;
     } else if (lower.includes("cuesta") || lower.includes("costo") || lower.includes("cotiz") || lower.includes("precio") || lower.includes("presupuesto") || lower.includes("tarifa") || lower.includes("cuanto vale") || lower.includes("semanas") || lower.includes("demora")) {
-      botReply = `💼 **Inversión y Tiempos de Entrega Estimados en Kunkurt Devs:**\n\n• **Full-Stack Web App:** Desde **$1,200 USD** (3 a 4 semanas).\n• **Microservicios & API Core:** Desde **$1,800 USD** (4 a 5 semanas).\n• **Sistema de IA & Motor RAG:** Desde **$2,500 USD** (4 a 6 semanas).\n• **Plataforma SaaS Multi-Tenant:** Desde **$2,900 USD** (5 a 7 semanas).\n• **Mobile App (iOS / Android):** Desde **$2,200 USD** (4 a 6 semanas).\n\n💡 *Condición de contratación:* Anticipo del **50%** para inicializar el sprint y **50% restante contraentrega** tras validación en staging.`;
+      botReply = `💼 **Tarifas y Tiempos de Entrega Accesibles para Emprendedores:**\n\n• 🛒 **Sistema POS & Facturación:** Desde **$290 USD** (1-2 semanas | Anticipo 50%: **$145 USD**).\n• 🌐 **Web Comercial & Catálogo:** Desde **$190 USD** (1 semana | Anticipo 50%: **$95 USD**).\n• ⚡ **Full-Stack Web App Pyme:** Desde **$480 USD** (2-3 semanas | Anticipo 50%: **$240 USD**).\n• 📱 **App Móvil (iOS/Android):** Desde **$650 USD** (3-4 semanas | Anticipo 50%: **$325 USD**).\n• 🤖 **Chatbot IA & Automatización:** Desde **$380 USD** (1-2 semanas | Anticipo 50%: **$190 USD**).\n\n💡 *Condición de contratación:* Anticipo del **50%** para inicializar el sprint y **50% restante contraentrega**.`;
       actionButtonsHtml = `
         <div class="flex flex-wrap gap-2 pt-2">
           <button onclick="switchToSection('quotation'); document.getElementById('copilotChatWindow').classList.add('hidden');" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
             <span>⚡</span> Ir al Cotizador
           </button>
           <button onclick="payQuotationDeposit()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] transition-all flex items-center gap-1 shadow">
-            <span>💳</span> Pagar Anticipo (50%)
+            <span>💳</span> Pagar Anticipo
           </button>
         </div>
       `;

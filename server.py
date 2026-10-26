@@ -603,16 +603,30 @@ def handle_copilot_chat(user_msg, user_role="public", user_name="Invitado"):
     # 2. Pricing / Quotes / Costs
     if _matches_copilot_phrase(msg, ("precio", "costo", "cuesta", "cuanto cuesta", "cuánto cuesta", "cotiz", "cuanto vale", "presupuesto", "tarifa", "cuanto demora", "tiempo", "demora", "semanas", "valores", "estimacion", "estimación")):
         return (
-            "💼 **Inversión y Tiempos de Entrega Estimados en Kunkurt:**\n\n"
-            "• **Full-Stack Web App:** Desde **$1,200 USD** (Entrega: 3 a 4 semanas).\n"
-            "• **Microservicios & API Core:** Desde **$1,800 USD** (Docker, Redis, alta concurrencia, 4 semanas).\n"
-            "• **Sistema de IA Generativa & RAG:** Desde **$2,400 USD** (Vector DB, Embeddings, 5 semanas).\n"
-            "• **Plataforma SaaS Multi-Tenant:** Desde **$2,900 USD** (Suscripciones, roles, dashboard, 6 semanas).\n\n"
-            "💡 *Modalidad de pago:* Trabajamos con **50% de anticipo** para arrancar el desarrollo y **50% contraentrega** previa verificación de calidad con código fuente y despliegue incluido.\n\n"
+            "💼 **Inversión y Tiempos de Entrega Ajustados para Emprendedores & Pymes:**\n\n"
+            "• 🛒 **Sistema POS & Facturación Pyme:** Desde **$290 USD** (Entrega: 1 a 2 semanas | Anticipo 50%: **$145 USD**).\n"
+            "• 🌐 **Web Comercial & Catálogo:** Desde **$190 USD** (Entrega: 1 semana | Anticipo 50%: **$95 USD**).\n"
+            "• ⚡ **Full-Stack Web App a Medida:** Desde **$480 USD** (Entrega: 2 a 3 semanas | Anticipo 50%: **$240 USD**).\n"
+            "• 📱 **App Móvil para Negocios (iOS/Android):** Desde **$650 USD** (Entrega: 3 a 4 semanas | Anticipo 50%: **$325 USD**).\n"
+            "• 🤖 **Automatización con IA & Chatbot 24/7:** Desde **$380 USD** (Entrega: 1 a 2 semanas | Anticipo 50%: **$190 USD**).\n\n"
+            "💡 *Modalidad de pago accesible:* **50% de anticipo** para iniciar el desarrollo y **50% contraentrega** previa verificación de calidad con código fuente y soporte incluido.\n\n"
             "Puedes usar nuestro **Cotizador Inteligente** en la pestaña superior para personalizar los módulos exactos."
         )
 
-    # 3. Payment Methods
+    # 3. Sistemas POS & Facturación para Pequeños Negocios
+    if _matches_copilot_phrase(msg, ("pos", "punto de venta", "facturacion", "facturación", "inventario", "caja", "cuadre", "ticket", "impresora termica", "impresora térmica", "lector de barras", "negocio", "tienda", "emprendedor")):
+        return (
+            "🛒 **Sistemas POS & Facturación para Pequeños Emprendedores:**\n\n"
+            "Desarrollamos soluciones de Punto de Venta (POS) rápidas, económicas y fáciles de usar para tiendas, restaurantes, minimarkets y negocios independientes:\n\n"
+            "• ⚡ **Ventas Rápidas en Caja:** Registro ágil de ventas en segundos con efectivo, transferencias, PSE y tarjetas.\n"
+            "• 📦 **Control de Inventario:** Control de stock en tiempo real y alertas de productos por agotarse.\n"
+            "• 🖨️ **Impresión de Tickets:** Compatible con impresoras térmicas (58/80mm) y lectores de código de barras.\n"
+            "• 📊 **Cuadre de Caja Diario:** Reporte claro de ventas totales y ganancias por turno.\n"
+            "• 🔌 **Modo 100% Offline:** Funciona incluso si se cae internet gracias a su base de datos local SQLite.\n\n"
+            "💡 **Precio especial para emprendedores:** Desde **$290 USD** (Anticipo 50%: **$145 USD**) con entrega en 1 a 2 semanas."
+        )
+
+    # 4. Payment Methods
     if _matches_copilot_phrase(msg, ("pago", "pagar", "pasarela", "stripe", "paypal", "mercado pago", "pse", "tarjeta", "cripto", "usdt", "apple pay", "google pay", "como pago", "como se paga", "donde pago")):
         return (
             "💳 **Pasarelas de Pago Globales Disponibles en Kunkurt:**\n\n"
@@ -640,10 +654,12 @@ def handle_copilot_chat(user_msg, user_role="public", user_name="Invitado"):
     if _matches_copilot_phrase(msg, ("servicios", "hacen", "ofrecen", "que hacen", "a que se dedican", "quienes son", "kunkurt")):
         return (
             "🚀 **Servicios Principales de Ingeniería en Kunkurt Devs:**\n\n"
+            "• 🛒 **Sistemas POS & Punto de Venta:** Facturación en caja, control de stock/inventario y tickets térmicos para emprendedores y comercios locales.\n"
             "• 🌐 **Desarrollo Web & SaaS:** Plataformas interactivas, paneles administrativos y arquitectura multi-tenant.\n"
             "• 🤖 **Inteligencia Artificial Aplicada:** Agentes virtuales, motores RAG de búsqueda semántica y pipelines LLM.\n"
-            "• ☁️ **Cloud, Microservicios & DevOps:** Contenedores Docker, CI/CD con GitHub Actions y clústeres de alta disponibilidad.\n"
-            "• 💳 **Integración de Pasarelas Fintech:** Checkouts multidivisa seguros (Stripe, PayPal, PSE).\n"
+            "• 📱 **Aplicaciones Móviles:** Apps nativas y cross-platform a 60 FPS (Flutter / React Native).\n"
+            "• ☁️ **Cloud, Microservicios & DevOps:** Contenedores Docker, CI/CD con GitHub Actions y bases de datos seguras.\n"
+            "• 💳 **Integración de Pasarelas Fintech:** Checkouts multidivisa seguros (Mercado Pago PSE, Stripe, PayPal, Cripto).\n"
             "• 🎫 **Soporte & Mantenimiento SLA:** Mesa de ayuda en vivo con seguimiento de incidencias 24/7."
         )
 
