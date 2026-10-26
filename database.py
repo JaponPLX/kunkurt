@@ -1640,6 +1640,58 @@ def save_webhook_settings(settings_dict):
     conn.close()
     return get_webhook_settings()
 
+def get_payment_settings():
+    """
+    Returns configured payment gateway settings from SQLite or defaults.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM settings WHERE key LIKE 'payment_%'")
+    rows = cursor.fetchall()
+    conn.close()
+    settings = {r["key"]: r["value"] for r in rows}
+    return {
+        "stripe_secret_key": settings.get("payment_stripe_secret_key", ""),
+        "stripe_publishable_key": settings.get("payment_stripe_publishable_key", ""),
+        "stripe_enabled": settings.get("payment_stripe_enabled", "true") == "true",
+        "mercadopago_access_token": settings.get("payment_mercadopago_access_token", ""),
+        "mercadopago_public_key": settings.get("payment_mercadopago_public_key", ""),
+        "mercadopago_enabled": settings.get("payment_mercadopago_enabled", "true") == "true",
+        "paypal_client_id": settings.get("payment_paypal_client_id", ""),
+        "paypal_client_secret": settings.get("payment_paypal_client_secret", ""),
+        "paypal_mode": settings.get("payment_paypal_mode", "sandbox"),
+        "paypal_enabled": settings.get("payment_paypal_enabled", "true") == "true",
+        "crypto_wallet": settings.get("payment_crypto_wallet", "TDX7a9hN21aE7KkQZ8kM92KunkurtPay928"),
+        "crypto_network": settings.get("payment_crypto_network", "USDT TRC-20"),
+        "crypto_enabled": settings.get("payment_crypto_enabled", "true") == "true",
+        "live_mode": settings.get("payment_live_mode", "false") == "true"
+    }
+
+def save_payment_settings(settings_dict):
+    conn = get_connection()
+    cursor = conn.cursor()
+    mapping = {
+        "payment_stripe_secret_key": settings_dict.get("stripe_secret_key", "").strip(),
+        "payment_stripe_publishable_key": settings_dict.get("stripe_publishable_key", "").strip(),
+        "payment_stripe_enabled": "true" if settings_dict.get("stripe_enabled", True) else "false",
+        "payment_mercadopago_access_token": settings_dict.get("mercadopago_access_token", "").strip(),
+        "payment_mercadopago_public_key": settings_dict.get("mercadopago_public_key", "").strip(),
+        "payment_mercadopago_enabled": "true" if settings_dict.get("mercadopago_enabled", True) else "false",
+        "payment_paypal_client_id": settings_dict.get("paypal_client_id", "").strip(),
+        "payment_paypal_client_secret": settings_dict.get("paypal_client_secret", "").strip(),
+        "payment_paypal_mode": settings_dict.get("paypal_mode", "sandbox").strip().lower(),
+        "payment_paypal_enabled": "true" if settings_dict.get("paypal_enabled", True) else "false",
+        "payment_crypto_wallet": settings_dict.get("crypto_wallet", "").strip(),
+        "payment_crypto_network": settings_dict.get("crypto_network", "USDT TRC-20").strip(),
+        "payment_crypto_enabled": "true" if settings_dict.get("crypto_enabled", True) else "false",
+        "payment_live_mode": "true" if settings_dict.get("live_mode") else "false"
+    }
+    for k, v in mapping.items():
+        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (k, str(v)))
+    conn.commit()
+    conn.close()
+    return get_payment_settings()
+
 # ============================================================================
 # PAYMENTS & CHECKOUT MODULE
 # ============================================================================

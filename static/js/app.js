@@ -3667,6 +3667,38 @@ async function processPaymentCheckout() {
     paymentData = { device_wallet: "Apple / Google Pay Biometric", biometric_verified: true };
   }
 
+  // 1. Check if backend can create a live external checkout (Stripe Hosted Checkout / Mercado Pago PSE / PayPal)
+  try {
+    const sessionRes = await fetch("/api/payments/create-checkout-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name: clientName,
+        client_email: clientEmail,
+        amount: paymentCurrentAmount,
+        currency: "USD",
+        gateway: activePaymentGateway,
+        concept: paymentCurrentConcept
+      })
+    });
+    if (sessionRes.ok) {
+      const sessionData = await sessionRes.json();
+      if (sessionData && sessionData.success && sessionData.mode === "live_redirect" && sessionData.checkout_url) {
+        if (btnProcess) {
+          btnProcess.innerHTML = "<span>🚀</span> Redirigiendo a pasarela oficial...";
+        }
+        showToast("🚀 Redirigiendo a pasarela segura oficial...", "info");
+        playCyberSound("chime");
+        setTimeout(() => {
+          window.location.href = sessionData.checkout_url;
+        }, 600);
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn("Pasarela externa en espera, procesando ledger directo:", err);
+  }
+
   let approvedRecord = null;
 
   try {
@@ -3818,6 +3850,122 @@ async function loadPayments() {
         </td>
       </tr>
     `;
+  }
+}
+
+// ============================================================================
+// GESTOR DE PASARELAS DE PAGO (STRIPE, MERCADO PAGO, PAYPAL & CRIPTO)
+// ============================================================================
+function openGatewaySettingsModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("gatewaySettingsModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  loadGatewaySettings();
+}
+
+function closeGatewaySettingsModal() {
+  playCyberSound("click");
+  const modal = document.getElementById("gatewaySettingsModal");
+  if (modal) modal.classList.add("hidden");
+  document.body.style.overflow = "auto";
+}
+
+function updateGatewayModeLabel() {
+  const chk = document.getElementById("gwLiveMode");
+  const lbl = document.getElementById("gwModeLabel");
+  if (!chk || !lbl) return;
+  if (chk.checked) {
+    lbl.textContent = "PRODUCCIÓN (Cobros Reales)";
+    lbl.className = "ml-2 text-xs font-mono font-bold text-emerald-400";
+  } else {
+    lbl.textContent = "SANDBOX (Pruebas)";
+    lbl.className = "ml-2 text-xs font-mono font-bold text-amber-400";
+  }
+}
+
+async function loadGatewaySettings() {
+  try {
+    const role = (currentProfile && currentProfile.role) || "client";
+    const res = await fetch("/api/payments/settings", {
+      headers: { "X-User-Role": role }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success && data.settings) {
+        const s = data.settings;
+        const liveChk = document.getElementById("gwLiveMode");
+        if (liveChk) liveChk.checked = !!s.live_mode;
+        updateGatewayModeLabel();
+
+        const sSecret = document.getElementById("gwStripeSecret");
+        const sPublic = document.getElementById("gwStripePublic");
+        const mpToken = document.getElementById("gwMpToken");
+        const mpPublic = document.getElementById("gwMpPublic");
+        const ppClient = document.getElementById("gwPaypalClient");
+        const ppSecret = document.getElementById("gwPaypalSecret");
+        const crWallet = document.getElementById("gwCryptoWallet");
+
+        if (sSecret) sSecret.value = s.stripe_secret_key || "";
+        if (sPublic) sPublic.value = s.stripe_publishable_key || "";
+        if (mpToken) mpToken.value = s.mercadopago_access_token || "";
+        if (mpPublic) mpPublic.value = s.mercadopago_public_key || "";
+        if (ppClient) ppClient.value = s.paypal_client_id || "";
+        if (ppSecret) ppSecret.value = s.paypal_client_secret || "";
+        if (crWallet) crWallet.value = s.crypto_wallet || "";
+      }
+    }
+  } catch (err) {
+    console.warn("Aviso cargando pasarelas:", err);
+  }
+}
+
+async function handleSaveGatewaySettings(e) {
+  if (e) e.preventDefault();
+  playCyberSound("click");
+  const btn = document.getElementById("btnSaveGateways");
+  const origText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "<span>⏳</span> Guardando credenciales...";
+  }
+
+  const payload = {
+    live_mode: document.getElementById("gwLiveMode")?.checked || false,
+    stripe_secret_key: document.getElementById("gwStripeSecret")?.value?.trim() || "",
+    stripe_publishable_key: document.getElementById("gwStripePublic")?.value?.trim() || "",
+    mercadopago_access_token: document.getElementById("gwMpToken")?.value?.trim() || "",
+    mercadopago_public_key: document.getElementById("gwMpPublic")?.value?.trim() || "",
+    paypal_client_id: document.getElementById("gwPaypalClient")?.value?.trim() || "",
+    paypal_client_secret: document.getElementById("gwPaypalSecret")?.value?.trim() || "",
+    crypto_wallet: document.getElementById("gwCryptoWallet")?.value?.trim() || ""
+  };
+
+  try {
+    const role = (currentProfile && currentProfile.role) || "admin";
+    const res = await fetch("/api/payments/settings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-User-Role": role
+      },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      showToast("✅ Credenciales de Pasarelas guardadas con éxito.", "success");
+      playCyberSound("chime");
+      setTimeout(closeGatewaySettingsModal, 600);
+    } else {
+      showToast("Error al guardar credenciales.", "error");
+    }
+  } catch (err) {
+    showToast("Error conectando con el servidor.", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
   }
 }
 
@@ -5547,6 +5695,10 @@ function toggleQuickToolsDropdown() {
 }
 
 // Window Exports for new features
+window.openGatewaySettingsModal = openGatewaySettingsModal;
+window.closeGatewaySettingsModal = closeGatewaySettingsModal;
+window.updateGatewayModeLabel = updateGatewayModeLabel;
+window.handleSaveGatewaySettings = handleSaveGatewaySettings;
 window.scrollToAboutSection = scrollToAboutSection;
 window.toggleQuickToolsDropdown = toggleQuickToolsDropdown;
 window.downloadInvoiceDocumentFile = downloadInvoiceDocumentFile;

@@ -5,10 +5,16 @@ relative to the project root directory, or configurable via environment variable
 """
 
 import os
+import sys
 from pathlib import Path
 
 # Project root directory (always calculated dynamically relative to this file)
 BASE_DIR = Path(__file__).resolve().parent
+
+# Ensure local dependencies in ./lib (stripe, mercadopago, etc.) are always accessible
+LIB_DIR = BASE_DIR / "lib"
+if LIB_DIR.is_dir() and str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
 
 # Optional: Load simple .env file if present in the project directory
 ENV_FILE = BASE_DIR / ".env"
@@ -46,8 +52,18 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "alejandrobelno964@gmail.com").strip().lower()
 ADMIN_NAME = os.getenv("ADMIN_NAME", "JaponPLX (Alejandro)").strip()
 DEFAULT_GITHUB_USER = os.getenv("DEFAULT_GITHUB_USER", "JaponPLX").strip()
-WHATSAPP_PHONE = os.getenv("WHATSAPP_PHONE", "573100000000").strip()
+WHATSAPP_PHONE = os.getenv("WHATSAPP_PHONE", "573147776049").strip()
 CALENDLY_URL = os.getenv("CALENDLY_URL", "").strip()
+
+# Global Payment Gateways (Stripe, Mercado Pago PSE, PayPal, Crypto)
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "").strip()
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "").strip()
+MERCADOPAGO_ACCESS_TOKEN = os.getenv("MERCADOPAGO_ACCESS_TOKEN", "").strip()
+MERCADOPAGO_PUBLIC_KEY = os.getenv("MERCADOPAGO_PUBLIC_KEY", "").strip()
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "").strip()
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "").strip()
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox").strip().lower()
+CRYPTO_WALLET_ADDRESS = os.getenv("CRYPTO_WALLET_ADDRESS", "TDX7a9hN21aE7KkQZ8kM92KunkurtPay928").strip()
 
 # Optional SMTP Settings (if not provided, email alerts are logged to EMAIL_LOG_PATH)
 SMTP_SERVER = os.getenv("SMTP_SERVER", "")

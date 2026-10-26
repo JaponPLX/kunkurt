@@ -1,2 +1,4 @@
-# Kunkurt Devs utiliza exclusivamente la librería estándar de Python 3.
-# No requiere instalar paquetes externos vía pip.
+# Kunkurt Devs — Dependencias para Pasarelas de Pago Oficiales en Vivo (Stripe, Mercado Pago PSE, PayPal)
+stripe>=10.0.0
+mercadopago>=3.0.0
+requests>=2.28.0

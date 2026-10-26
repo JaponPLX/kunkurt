@@ -1352,6 +1352,12 @@
             <span>⚡</span> Integraciones Técnicas
           </label>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <button onclick="closeToolsModal(); openGatewaySettingsModal();" class="p-2.5 rounded-xl bg-white/[0.04] border border-emerald-500/40 hover:border-emerald-300 text-left transition-all group">
+              <span class="text-base block mb-1">💳</span>
+              <span class="text-xs font-bold text-white block group-hover:text-emerald-300">Pasarelas de Pago</span>
+              <span class="text-[10px] text-emerald-400 font-mono">Stripe, MP & PayPal</span>
+            </button>
+
             <button onclick="closeToolsModal(); openEmployeeAdminModal(); switchAdminTab('smtp');" class="p-2.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-cyan-400 text-left transition-all">
               <span class="text-base block mb-1">📧</span>
               <span class="text-xs font-bold text-white block">Gmail SMTP</span>
@@ -1412,6 +1418,133 @@
         </button>
       </div>
 
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL: CONFIGURACIÓN OFICIAL DE PASARELAS DE PAGO (STRIPE, MP, PAYPAL) -->
+  <!-- ====================================================================== -->
+  <div id="gatewaySettingsModal" class="hidden fixed inset-0 z-50 overflow-y-auto modal-overlay flex items-center justify-center p-4">
+    <div class="glass-panel modal-content rounded-3xl border border-emerald-500/40 w-full max-w-2xl bg-[#090d16]/98 shadow-[0_0_80px_rgba(16,185,129,0.35)] overflow-hidden">
+      <!-- Header -->
+      <div class="p-6 border-b border-emerald-900/40 flex items-center justify-between bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-transparent">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            💳
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Pasarelas de Pago Oficiales</h3>
+            <p class="text-xs text-slate-400">Conecta tus cuentas reales de Stripe, Mercado Pago PSE y PayPal para recibir dinero directo.</p>
+          </div>
+        </div>
+        <button onclick="closeGatewaySettingsModal()" class="text-slate-400 hover:text-white p-2 text-lg">✕</button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="gatewaySettingsForm" onsubmit="handleSaveGatewaySettings(event)" class="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
+        
+        <!-- Live vs Sandbox Switch -->
+        <div class="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-white flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Modo de Operación de Pagos
+            </div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Activa Producción para cobrar dinero real a cuentas bancarias de tus clientes.</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="gwLiveMode" class="sr-only peer" onchange="updateGatewayModeLabel()">
+            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            <span id="gwModeLabel" class="ml-2 text-xs font-mono font-bold text-amber-400">SANDBOX</span>
+          </label>
+        </div>
+
+        <!-- 1. Stripe -->
+        <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">💳</span>
+              <strong class="text-white text-xs">Stripe Global (Visa, Mastercard, Amex, Apple/Google Pay)</strong>
+            </div>
+            <span class="text-[10px] font-mono text-cyan-400">Tarjeta Internacional</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-300 mb-1">Stripe Secret Key (sk_live_... / sk_test_...)</label>
+              <input type="password" id="gwStripeSecret" placeholder="sk_live_51P..." class="cyber-input text-xs py-2 font-mono">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-300 mb-1">Stripe Publishable Key (pk_live_... / pk_test_...)</label>
+              <input type="text" id="gwStripePublic" placeholder="pk_live_51P..." class="cyber-input text-xs py-2 font-mono">
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Mercado Pago (Colombia PSE / Tarjetas) -->
+        <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">💙</span>
+              <strong class="text-white text-xs">Mercado Pago (PSE Bancolombia, Nequi, Daviplata, Tarjetas)</strong>
+            </div>
+            <span class="text-[10px] font-mono text-blue-400">Colombia & Latam</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-300 mb-1">Access Token (APP_USR-...)</label>
+              <input type="password" id="gwMpToken" placeholder="APP_USR-78291..." class="cyber-input text-xs py-2 font-mono">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-300 mb-1">Public Key (APP_USR-...)</label>
+              <input type="text" id="gwMpPublic" placeholder="APP_USR-8291..." class="cyber-input text-xs py-2 font-mono">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. PayPal -->
+        <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🅿️</span>
+              <strong class="text-white text-xs">PayPal Global Checkout</strong>
+            </div>
+            <span class="text-[10px] font-mono text-indigo-400">Cuenta PayPal</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-300 mb-1">Client ID de PayPal</label>
+              <input type="text" id="gwPaypalClient" placeholder="AbC9821..." class="cyber-input text-xs py-2 font-mono">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-300 mb-1">Secret Key de PayPal</label>
+              <input type="password" id="gwPaypalSecret" placeholder="EKj829..." class="cyber-input text-xs py-2 font-mono">
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Crypto / Binance Pay -->
+        <div class="p-4 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🟡</span>
+              <strong class="text-white text-xs">Billetera Cripto (USDT TRC-20 / Binance Pay)</strong>
+            </div>
+            <span class="text-[10px] font-mono text-amber-400">Web3 Vault</span>
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-300 mb-1">Dirección de Wallet USDT (TRC-20 o BEP-20 / Binance Pay ID)</label>
+            <input type="text" id="gwCryptoWallet" placeholder="TDX7a9hN21aE7KkQZ8kM92KunkurtPay928" class="cyber-input text-xs py-2 font-mono">
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span class="text-[10px] text-slate-400">🔒 Las claves se guardan encriptadas en tu servidor local.</span>
+          <button type="submit" id="btnSaveGateways" class="btn-neon text-xs py-2.5 px-6 bg-gradient-to-r from-emerald-500 to-teal-500 font-bold flex items-center gap-2">
+            <span>💾</span> Guardar Configuración de Pagos
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
