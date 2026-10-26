@@ -4529,6 +4529,7 @@ const I18N = {
   es: {
     navHome: "Inicio",
     navProjects: "Proyectos",
+    navAbout: "Nosotros",
     navQuote: "Cotizador",
     navTickets: "Tickets",
     navAnalytics: "Métricas",
@@ -4560,6 +4561,7 @@ const I18N = {
   en: {
     navHome: "Home",
     navProjects: "Projects",
+    navAbout: "About Us",
     navQuote: "Estimator",
     navTickets: "Tickets",
     navAnalytics: "Metrics",
@@ -4614,6 +4616,7 @@ function setLanguage(lang) {
   // Top Nav
   const navHome = document.getElementById("navLinkHome");
   const navProj = document.getElementById("navLinkProjects");
+  const navAbt = document.getElementById("navLinkAbout");
   const navQuo = document.getElementById("navLinkQuote");
   const navTick = document.getElementById("navLinkTickets");
   const navAna = document.getElementById("navLinkAnalytics");
@@ -4621,6 +4624,7 @@ function setLanguage(lang) {
 
   if (navHome) navHome.textContent = dict.navHome;
   if (navProj) navProj.textContent = dict.navProjects;
+  if (navAbt) navAbt.textContent = dict.navAbout;
   if (navQuo) navQuo.textContent = dict.navQuote;
   if (navTick) navTick.textContent = dict.navTickets;
   if (navAna) navAna.textContent = dict.navAnalytics;
@@ -5522,7 +5526,16 @@ function updateWhatsAppContext(projectType, cost) {
   const btn = document.getElementById("floatingWhatsAppBtn");
   if (!btn) return;
   const text = encodeURIComponent(`Hola Alejandro, estoy cotizando una ${projectType} por $${cost} USD en Kunkurt Devs y me gustaría coordinar los detalles.`);
-  btn.href = `https://wa.me/573100000000?text=${text}`;
+  btn.href = `https://wa.me/573147776049?text=${text}`;
+}
+
+function scrollToAboutSection() {
+  playCyberSound("click");
+  switchToSection("projects");
+  setTimeout(() => {
+    const el = document.getElementById("aboutSection");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }, 100);
 }
 
 // Quick tools dropdown toggle
@@ -5534,6 +5547,7 @@ function toggleQuickToolsDropdown() {
 }
 
 // Window Exports for new features
+window.scrollToAboutSection = scrollToAboutSection;
 window.toggleQuickToolsDropdown = toggleQuickToolsDropdown;
 window.downloadInvoiceDocumentFile = downloadInvoiceDocumentFile;
 window.setLanguage = setLanguage;
