@@ -117,10 +117,10 @@
 
         <!-- Center: Elegant, Airy Navigation (Pawington Architecture) -->
         <nav class="hidden md:flex items-center gap-6 lg:gap-8 text-[13px] font-medium text-slate-300">
-          <button id="navLinkProjects" onclick="switchToSection('projects')" class="hover:text-white transition-colors cursor-pointer py-1">
+          <button id="navLinkHome" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="hover:text-white transition-colors cursor-pointer py-1">
             Inicio
           </button>
-          <button onclick="switchToSection('projects')" class="hover:text-white transition-colors cursor-pointer py-1">
+          <button id="navLinkProjects" onclick="switchToSection('projects')" class="hover:text-white transition-colors cursor-pointer py-1">
             Proyectos
           </button>
           <button onclick="switchToSection('quotation'); setTimeout(() => { const el = document.getElementById('quoteProjectTypeContainer'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 100)" class="hover:text-emerald-300 transition-colors cursor-pointer py-1 flex items-center gap-1.5">

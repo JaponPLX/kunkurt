@@ -4527,6 +4527,7 @@ let currentLanguage = "es";
 
 const I18N = {
   es: {
+    navHome: "Inicio",
     navProjects: "Proyectos",
     navQuote: "Cotizador",
     navTickets: "Tickets",
@@ -4557,6 +4558,7 @@ const I18N = {
     statusPlan: "🔵 En Planeación"
   },
   en: {
+    navHome: "Home",
     navProjects: "Projects",
     navQuote: "Estimator",
     navTickets: "Tickets",
@@ -4610,12 +4612,14 @@ function setLanguage(lang) {
   });
 
   // Top Nav
+  const navHome = document.getElementById("navLinkHome");
   const navProj = document.getElementById("navLinkProjects");
   const navQuo = document.getElementById("navLinkQuote");
   const navTick = document.getElementById("navLinkTickets");
   const navAna = document.getElementById("navLinkAnalytics");
   const navWik = document.getElementById("navLinkWiki");
 
+  if (navHome) navHome.textContent = dict.navHome;
   if (navProj) navProj.textContent = dict.navProjects;
   if (navQuo) navQuo.textContent = dict.navQuote;
   if (navTick) navTick.textContent = dict.navTickets;
